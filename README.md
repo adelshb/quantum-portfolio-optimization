@@ -1,6 +1,6 @@
-# Quantum Portforlio Optimization via Entanglement forging
+# Quantum Portfolio Optimization via Entanglement forging
 
-Qiskit implementation 
+Qiskit implementation of a Portfolio Optimization (PO) via Entangementl Forging and VQE optimization.
 
  ## Requirements
  * Python 3.8
@@ -14,3 +14,6 @@ Qiskit implementation
  ```shell
     python setup.py install
  ```
+
+ ## License
+[Apache License 2.0](https://github.com/adelshb/quantum-porforlio-optimization-via-entanglement-forging/blob/main/LICENSE)

@@ -21,13 +21,12 @@ from qiskit.circuit.library import TwoLocal
 def vqe_solver(H: object,
                 backend: Optional[str] = "statevector",
                 seed: Optional[int] = None
-                )-> float :
-
+                )-> object :
 
         qi = QuantumInstance(BasicAer.get_backend('statevector_simulator'), seed_transpiler=seed, seed_simulator=seed)
 
         ansatz = TwoLocal(rotation_blocks='ry', entanglement_blocks='cz')
-        slsqp = SLSQP(maxiter=1000)
+        slsqp = SLSQP(maxiter=100)
         vqe = VQE(operator=H, var_form=ansatz, optimizer=slsqp, quantum_instance=qi)
         result = vqe.run()
 
