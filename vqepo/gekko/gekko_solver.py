@@ -10,16 +10,33 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
+from gekko import GEKKO    
 import numpy as np
-from src.utils import randcovmat
 
-from src.solver.gekko import gekko_solver
-from src.solver.vqe import vqe_solver
+def GekkoSolver(H):
 
-d = 2
-H = randcovmat(d)
+    # initialize Model
+    m = GEKKO()
 
-val = min(np.linalg.eig(H)[0])
+    # initialize variable
+    w = m.Array(m.Var,(H.shape[0]))
 
-res_gekko = gekko_solver(H)
-res_vqe = vqe_solver(H)
+    # intial guess
+    #ig = [1,5,5,1]
+
+    # upper and lower bounds
+    i = 0
+    for wi in w:
+        #xi.value = ig[i]
+        wi.lower = 0
+        wi.upper = 1
+
+    # Equations
+    m.Equation(sum(w)==1)
+
+    #Objective
+    m.Obj(w.T @ H @ w)
+    m.solve()
+    print(w)
+
+    return m

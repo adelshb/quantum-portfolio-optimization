@@ -4,6 +4,3 @@ __init__.py
 .ipynb_checkpoints
 .vscode
 env/
-build
-dist
-vqepo.egg-info

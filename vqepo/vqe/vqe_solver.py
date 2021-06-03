@@ -18,7 +18,7 @@ from qiskit.aqua.algorithms import VQE
 from qiskit.aqua.components.optimizers import SLSQP
 from qiskit.circuit.library import TwoLocal
 
-def vqe_solver(H: object,
+def VQESolver(H: object,
                 backend: Optional[str] = "statevector",
                 seed: Optional[int] = None
                 )-> object :

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-#
 # Written by Adel Sohbi, https://github.com/adelshb
 #
 # This code is licensed under the Apache License, Version 2.0. You may
@@ -10,8 +8,5 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-import numpy as np
-
-def randcovmat(d):
-    A = np.random.rand(d, d)
-    return A @ A.T
+python benchmark.py \
+    --d 2 
