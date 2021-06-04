@@ -22,7 +22,7 @@ from vqepo.vqe.qubo import bin_enc
 
 def VQESolver(Cov: object,
                 Nq: int,
-                backend: Optional[str] = "statevector",
+                #backend: Optional[str] = "statevector",
                 seed: Optional[int] = None
                 )-> object :
         """
@@ -40,16 +40,20 @@ def VQESolver(Cov: object,
         result : VQE result object.
         """
 
+        # Compute the Hamiltonian via binarization encoding
         H = bin_enc(Nq, Cov)
+
+        # Prepare QuantumInstance
         qi = QuantumInstance(BasicAer.get_backend('statevector_simulator'), seed_transpiler=seed, seed_simulator=seed)
 
+        # Select the VQE parameters
         ansatz = TwoLocal(rotation_blocks='ry', entanglement_blocks='cz')
         slsqp = SLSQP(maxiter=100)
         vqe = VQE(operator=H, var_form=ansatz, optimizer=slsqp, quantum_instance=qi)
         result = vqe.run()
 
-        import pprint
-        pp = pprint.PrettyPrinter(indent=4)
-        pp.pprint(result)
+        # import pprint
+        # pp = pprint.PrettyPrinter(indent=4)
+        # pp.pprint(result)
 
         return result

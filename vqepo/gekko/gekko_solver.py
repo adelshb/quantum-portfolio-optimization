@@ -13,30 +13,25 @@
 from gekko import GEKKO    
 import numpy as np
 
-def GekkoSolver(H):
+def GekkoSolver(Cov):
 
-    # initialize Model
+    # Initialize model and variables
     m = GEKKO()
+    w = m.Array(m.Var,(Cov.shape[0]))
 
-    # initialize variable
-    w = m.Array(m.Var,(H.shape[0]))
-
-    # intial guess
-    #ig = [1,5,5,1]
-
-    # upper and lower bounds
-    i = 0
+    # Upper and lower bounds on variables
     for wi in w:
-        #xi.value = ig[i]
         wi.lower = 0
         wi.upper = 1
 
-    # Equations
+    # Sum of the weight is 1.
     m.Equation(sum(w)==1)
 
-    #Objective
-    m.Obj(w.T @ H @ w)
-    m.solve()
-    print(w)
+    # Objective 
+    m.Obj(w.T @ Cov @ w)
 
-    return w.value
+    m.solve(disp=False)
+    # print(w)
+    # print(type(w))
+
+    return w

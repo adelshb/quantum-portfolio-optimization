@@ -23,18 +23,18 @@ from vqepo.vqe.vqe_solver import VQESolver
 
 def main(args):
 
-    H = randcovmat(args.d)
+    Cov = randcovmat(args.d)
 
     # True Value
-    val = min(np.linalg.eig(H)[0])
+    val = min(np.linalg.eig(Cov)[0])
     print(val)
 
     # Gekko
-    res_gekko = GekkoSolver(H)
+    res_gekko = GekkoSolver(Cov)
     print(res_gekko)
 
     # # VQE
-    # res_vqe = VQESolver(H)
+    # res_vqe = VQESolver(Cov)
     # print(res_vqe)
 
 if __name__ == "__main__":
