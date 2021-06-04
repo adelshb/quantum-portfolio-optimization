@@ -18,6 +18,7 @@ import numpy as np
 
 from utils import randcovmat
 
+from vqepo.cvxpy.cvxpy_solver import CVXPYSolver
 from vqepo.gekko.gekko_solver import GekkoSolver
 from vqepo.vqe.vqe_solver import VQESolver
 
@@ -25,17 +26,17 @@ def main(args):
 
     Cov = randcovmat(args.d)
 
-    # True Value
-    val = min(np.linalg.eig(Cov)[0])
-    print(val)
+    # CVXPY
+    w_cvxpy = CVXPYSolver(Cov)
+    print("CVXPY: ", w_cvxpy.T @ Cov @ w_cvxpy)
 
-    # Gekko
-    res_gekko = GekkoSolver(Cov)
-    print(res_gekko)
-
+    # # Gekko
+    # w_gekko = GekkoSolver(Cov)
+    # print("GEKKO :", w_gekko.T @ Cov @ w_gekko)
+    
     # # VQE
-    # res_vqe = VQESolver(Cov)
-    # print(res_vqe)
+    res_vqe = VQESolver(2,Cov)
+    print(res_vqe)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
@@ -44,3 +45,18 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args)
+
+
+
+eig = np.linalg.eig(Cov)
+w = eig[1][np.argmin(eig[0])]
+val = w.T @ Cov @ w / sum(w)**2
+print("TRUE: ", val)
+
+# CVXPY
+w_cvxpy = CVXPYSolver(Cov)
+print("CVXPY: ", w_cvxpy.T @ Cov @ w_cvxpy)
+
+# Gekko
+w_gekko = GekkoSolver(Cov)
+print("GEKKO :", w_gekko.T @ Cov @ w_gekko)

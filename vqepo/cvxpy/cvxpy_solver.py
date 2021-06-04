@@ -10,26 +10,19 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-from gekko import GEKKO    
+import cvxpy as cp  
 import numpy as np
 
-def GekkoSolver(Cov):
+def CVXPYSolver(Cov):
 
-    # Initialize model and variables
-    m = GEKKO()
-    w = m.Array(m.Var,Cov.shape[0])
-
-    # Upper and lower bounds on variables
+    # Define and solve the CVXPY problem.
+    w = cp.Variable(Cov.shape[0])
+    constraints = [sum(w) == 1]
     for wi in w:
-        wi.lower = 0
-        wi.upper = 1
+        constraints += [wi <= 1]
+        constraints += [0 <= wi]
+    prob = cp.Problem(cp.Minimize(cp.quad_form(w, Cov)),
+                    constraints)
 
-    # Sum of the weight is 1.
-    m.Equation(sum(w)==1)
-
-    # Objective 
-    m.Obj(w.T @ Cov @ w)
-
-    m.solve(disp=False)
-
-    return np.array([wi for wi in w])
+    prob.solve(solver=cp.MOSEK, verbose=False)
+    return w.value
