@@ -18,11 +18,29 @@ from qiskit.aqua.algorithms import VQE
 from qiskit.aqua.components.optimizers import SLSQP
 from qiskit.circuit.library import TwoLocal
 
-def VQESolver(H: object,
+from vqepo.vqe.qubo import bin_enc
+
+def VQESolver(Cov: object,
+                Nq: int,
                 backend: Optional[str] = "statevector",
                 seed: Optional[int] = None
                 )-> object :
+        """
+        Take a Covariance matrix (from the different assets) and minimize the risk via VQE optimization.
 
+        Input
+        ----------
+        Cov : Covariance matrix
+        Nq : Each variable is encoded on Nq bits.
+        backend : Backend for qiskit QuantumInstance.
+        seed : seed for QuantumInstance.
+
+        Output
+        ----------
+        result : VQE result object.
+        """
+
+        H = bin_enc(Nq, Cov)
         qi = QuantumInstance(BasicAer.get_backend('statevector_simulator'), seed_transpiler=seed, seed_simulator=seed)
 
         ansatz = TwoLocal(rotation_blocks='ry', entanglement_blocks='cz')

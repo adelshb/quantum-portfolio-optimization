@@ -13,11 +13,13 @@
     Recast the optimization as a Quadratic Unconstrained Binary Optimization (QUBO) via binary encoding of each variable.
 """
 
-def bin_enc(Nq):
+import numpy as np 
+def bin_enc(Nq, Cov):
     """
     Input
     ----------
     Nq : Each variable is encoded on Nq bits.
+    Cov : Covariance matrix
 
     Output
     ----------
@@ -25,5 +27,8 @@ def bin_enc(Nq):
     """
 
     K = 2**Nq - 1
+    #B = np.tile([2**n for n in range(Nq)], (Nq, 1))
+    B = np.array([2**n for n in range(Nq**2)]).reshape((Nq,Nq))
 
+    Q = np.kron(Cov, B)/(K**2)
     return Q

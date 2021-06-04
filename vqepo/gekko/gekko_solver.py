@@ -39,4 +39,4 @@ def GekkoSolver(H):
     m.solve()
     print(w)
 
-    return m
+    return w.value
