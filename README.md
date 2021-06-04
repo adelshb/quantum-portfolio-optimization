@@ -6,6 +6,8 @@ Qiskit implementation of a Portfolio Optimization via Variational Quantum Eigens
  * Python 3.8+
  * Qiskit
  * Gekko
+ * CVXPY
+ * MOSEK
 
 ```shell
 pip install -r requirements.txt

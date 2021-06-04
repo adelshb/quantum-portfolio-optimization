@@ -34,8 +34,8 @@ def main(args):
     # w_gekko = GekkoSolver(Cov)
     # print("GEKKO :", w_gekko.T @ Cov @ w_gekko)
     
-    # # VQE
-    res_vqe = VQESolver(2,Cov)
+    # VQE
+    res_vqe = VQESolver(args.Nq, Cov)
     print(res_vqe)
 
 if __name__ == "__main__":
@@ -45,18 +45,3 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
     main(args)
-
-
-
-eig = np.linalg.eig(Cov)
-w = eig[1][np.argmin(eig[0])]
-val = w.T @ Cov @ w / sum(w)**2
-print("TRUE: ", val)
-
-# CVXPY
-w_cvxpy = CVXPYSolver(Cov)
-print("CVXPY: ", w_cvxpy.T @ Cov @ w_cvxpy)
-
-# Gekko
-w_gekko = GekkoSolver(Cov)
-print("GEKKO :", w_gekko.T @ Cov @ w_gekko)

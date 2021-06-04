@@ -9,16 +9,17 @@
 # Any modifications or derivative works of this code must retain this
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
+""" VQE Optimization"""
 
 from typing import Optional
 
 from qiskit import BasicAer
 from qiskit.utils import QuantumInstance
-from qiskit.aqua.algorithms import VQE
-from qiskit.aqua.components.optimizers import SLSQP
+from qiskit.algorithms import VQE
+from qiskit.algorithms.optimizers import SLSQP
 from qiskit.circuit.library import TwoLocal
 
-from vqepo.vqe.qubo import bin_enc
+from vqepo.vqe.qubo import bin_enc, qubo2ising
 
 def VQESolver(Cov: object,
                 Nq: int,
@@ -28,20 +29,19 @@ def VQESolver(Cov: object,
         """
         Take a Covariance matrix (from the different assets) and minimize the risk via VQE optimization.
 
-        Input
-        ----------
-        Cov : Covariance matrix
-        Nq : Each variable is encoded on Nq bits.
-        backend : Backend for qiskit QuantumInstance.
-        seed : seed for QuantumInstance.
+        Args:
+                Cov : Covariance matrix
+                Nq : Each variable is encoded on Nq bits.
+                backend : Backend for qiskit QuantumInstance.
+                seed : seed for QuantumInstance.
 
-        Output
-        ----------
-        result : VQE result object.
+        Returns:
+                result : VQE result object.
         """
 
-        # Compute the Hamiltonian via binarization encoding
-        H = bin_enc(Nq, Cov)
+        # Compute the Hamiltonian via binarization encoding and construct the Pauli Operators
+        Q = bin_enc(Nq, Cov)
+        H = qubo2ising(Q)
 
         # Prepare QuantumInstance
         qi = QuantumInstance(BasicAer.get_backend('statevector_simulator'), seed_transpiler=seed, seed_simulator=seed)
@@ -49,11 +49,17 @@ def VQESolver(Cov: object,
         # Select the VQE parameters
         ansatz = TwoLocal(rotation_blocks='ry', entanglement_blocks='cz')
         slsqp = SLSQP(maxiter=100)
-        vqe = VQE(operator=H, var_form=ansatz, optimizer=slsqp, quantum_instance=qi)
-        result = vqe.run()
 
-        # import pprint
-        # pp = pprint.PrettyPrinter(indent=4)
-        # pp.pprint(result)
+        vqe = VQE(ansatz = ansatz, 
+                optimizer = slsqp, 
+                initial_point = None, 
+                gradient = None, 
+                expectation = None, 
+                include_custom = False, 
+                max_evals_grouped = 1, 
+                callback = None, 
+                quantum_instance = qi)
+
+        result = vqe.compute_minimum_eigenvalue(operator = H)
 
         return result
