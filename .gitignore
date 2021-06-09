@@ -4,3 +4,4 @@ __init__.py
 .ipynb_checkpoints
 .vscode
 env/
+vqe_old/

@@ -14,12 +14,12 @@ Benchmark script
 """
 
 from argparse import ArgumentParser
-import numpy as np
+# import numpy as np
 
 from utils import randcovmat
 
 from vqepo.cvxpy.cvxpy_solver import CVXPYSolver
-from vqepo.gekko.gekko_solver import GekkoSolver
+# from vqepo.gekko.gekko_solver import GekkoSolver
 from vqepo.vqe.vqe_solver import VQESolver
 
 def main(args):
@@ -35,13 +35,14 @@ def main(args):
     # print("GEKKO :", w_gekko.T @ Cov @ w_gekko)
     
     # VQE
-    res_vqe = VQESolver(args.Nq, Cov)
+    res_vqe = VQESolver(Cov = Cov, Nq = args.Nq)
     print(res_vqe)
 
 if __name__ == "__main__":
     parser = ArgumentParser()
 
     parser.add_argument("--d", type=int, default=2)
+    parser.add_argument("--Nq", type=int, default=2)
 
     args = parser.parse_args()
     main(args)

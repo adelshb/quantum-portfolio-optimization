@@ -13,13 +13,20 @@
 
 from typing import Optional
 
+import numpy as np 
+
 from qiskit import BasicAer
 from qiskit.utils import QuantumInstance
+
+from qiskit.optimization import QuadraticProgram
+from qiskit.optimization.converters import LinearEqualityToPenalty
+from qiskit.optimization.algorithms import MinimumEigenOptimizer
+
 from qiskit.algorithms import VQE
 from qiskit.algorithms.optimizers import SLSQP
 from qiskit.circuit.library import TwoLocal
 
-from vqepo.vqe.qubo import bin_enc, qubo2ising
+from vqepo.vqe import to_ising
 
 def VQESolver(Cov: object,
                 Nq: int,
@@ -39,18 +46,37 @@ def VQESolver(Cov: object,
                 result : VQE result object.
         """
 
-        # Compute the Hamiltonian via binarization encoding and construct the Pauli Operators
-        Q = bin_enc(Nq, Cov)
-        H = qubo2ising(Q)
+        # Prepare Quadratic Program
+        N = Cov.shape[0]
+        K = 2**Nq - 1
+        mod = QuadraticProgram('portfolio_optimization')
+
+        # Record variable with binary encoding
+        for i in range(N):
+                for j in range(Nq):
+                        mod.binary_var('x'+str(i)+str(j))
+
+        # Objective function in binary encoding form
+        B = np.array([2**n for n in range(Nq**2)]).reshape((Nq,Nq))
+        Q = np.kron(Cov, B)/(K**2)
+        mod.minimize(constant=N, quadratic=Q)
+
+        # Sum asset allocation is 1 in binary encoding form
+        const = {"x"+str(i)+str(j): 2**j for i in range(N) for j in range(Nq)}
+        mod.linear_constraint(linear=const, sense='==', rhs=K**2, name='lin_eq')
+
+        lineq2penalty = LinearEqualityToPenalty()
+        qubo = lineq2penalty.convert(mod)
+        H, offset = qubo.to_ising()
 
         # Prepare QuantumInstance
         qi = QuantumInstance(BasicAer.get_backend('statevector_simulator'), seed_transpiler=seed, seed_simulator=seed)
 
         # Select the VQE parameters
-        ansatz = TwoLocal(rotation_blocks='ry', entanglement_blocks='cz')
+        ansatz = TwoLocal(num_qubits=N*Nq, rotation_blocks='ry', entanglement_blocks='cz')
         slsqp = SLSQP(maxiter=100)
 
-        vqe = VQE(ansatz = ansatz, 
+        vqe_mes = VQE(ansatz = ansatz, 
                 optimizer = slsqp, 
                 initial_point = None, 
                 gradient = None, 
@@ -60,6 +86,4 @@ def VQESolver(Cov: object,
                 callback = None, 
                 quantum_instance = qi)
 
-        result = vqe.compute_minimum_eigenvalue(operator = H)
-
-        return result
+        return  vqe_mes, qubo, H
