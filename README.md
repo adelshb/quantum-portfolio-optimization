@@ -1,6 +1,5 @@
-# Portfolio Optimization via Variational Quantum Eigensolver Optimization
-
-Qiskit implementation of a Portfolio Optimization via Variational Quantum Eigensolver (VQE) optimization.
+# Portfolio Optimization on a Quantum computer
+Qiskit implementation of a Portfolio Optimization.
 
  ## Requirements
  * Python 3.8+
