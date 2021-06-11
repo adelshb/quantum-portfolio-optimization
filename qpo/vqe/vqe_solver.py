@@ -26,8 +26,6 @@ from qiskit.algorithms import VQE
 from qiskit.algorithms.optimizers import SLSQP
 from qiskit.circuit.library import TwoLocal
 
-from vqepo.vqe import to_ising
-
 def VQESolver(Cov: object,
                 Nq: int,
                 #backend: Optional[str] = "statevector",
