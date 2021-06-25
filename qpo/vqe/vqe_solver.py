@@ -74,7 +74,7 @@ def VQESolver(Cov: object,
         ansatz = TwoLocal(num_qubits=N*Nq, rotation_blocks='ry', entanglement_blocks='cz')
         slsqp = SLSQP(maxiter=100)
 
-        vqe_mes = VQE(ansatz = ansatz, 
+        vqe = VQE(ansatz = ansatz, 
                 optimizer = slsqp, 
                 initial_point = None, 
                 gradient = None, 
@@ -84,4 +84,6 @@ def VQESolver(Cov: object,
                 callback = None, 
                 quantum_instance = qi)
 
-        return  vqe_mes, qubo, H
+        res = vqe.compute_minimum_eigenvalue(H)
+
+        return  res

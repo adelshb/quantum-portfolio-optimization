@@ -35,9 +35,9 @@ def main(args):
     # w_gekko = GekkoSolver(Cov)
     # print("GEKKO :", w_gekko.T @ Cov @ w_gekko)
 
-    # QAOA
-    res_qaoa = QAOASolver(Cov = Cov, Nq = args.Nq)
-    print(res_qaoa)
+    # # QAOA
+    # res_qaoa = QAOASolver(Cov = Cov, Nq = args.Nq)
+    # print(res_qaoa)
     
     # VQE
     res_vqe = VQESolver(Cov = Cov, Nq = args.Nq)
