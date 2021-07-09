@@ -1,4 +1,5 @@
 qiskit
+qiskit-optimization
 gekko
 cvxpy
 mosek

@@ -18,9 +18,9 @@ import numpy as np
 from qiskit import BasicAer
 from qiskit.utils import QuantumInstance
 
-from qiskit.optimization import QuadraticProgram
-from qiskit.optimization.converters import LinearEqualityToPenalty
-from qiskit.optimization.algorithms import MinimumEigenOptimizer
+from qiskit_optimization import QuadraticProgram
+from qiskit_optimization.converters import LinearEqualityToPenalty
+from qiskit_optimization.algorithms import MinimumEigenOptimizer
 
 from qiskit.algorithms import QAOA
 
