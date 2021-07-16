@@ -38,7 +38,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
 
     parser.add_argument("--d", type=int, default=2)
-    parser.add_argument("--Nq", type=int, default=3)
+    parser.add_argument("--Nq", type=int, default=2)
 
     args = parser.parse_args()
     main(args)

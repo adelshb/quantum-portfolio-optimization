@@ -4,7 +4,6 @@ Qiskit implementation of a Portfolio Optimization.
  ## Requirements
  * Python 3.8+
  * Qiskit
- * Gekko
  * CVXPY
  * MOSEK
 
