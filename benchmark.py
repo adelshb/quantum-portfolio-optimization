@@ -14,31 +14,22 @@ Benchmark script
 """
 
 from argparse import ArgumentParser
-# import numpy as np
 
 from utils import randcovmat
+import numpy as np
 
 from qpo.cvxpy.cvxpy_solver import CVXPYSolver
-# from qpo.gekko.gekko_solver import GekkoSolver
 from qpo.vqe.vqe_solver import VQESolver
-from qpo.qaoa.qaoa_solver import QAOASolver
 
 def main(args):
 
     Cov = randcovmat(args.d)
+    Cov = np.array([[1,0],[0,0]])
 
     # CVXPY
     w_cvxpy = CVXPYSolver(Cov)
     print("CVXPY: ", w_cvxpy.T @ Cov @ w_cvxpy)
 
-    # # Gekko
-    # w_gekko = GekkoSolver(Cov)
-    # print("GEKKO :", w_gekko.T @ Cov @ w_gekko)
-
-    # # QAOA
-    # res_qaoa = QAOASolver(Cov = Cov, Nq = args.Nq)
-    # print(res_qaoa)
-    
     # VQE
     res_vqe = VQESolver(Cov = Cov, Nq = args.Nq)
     print(res_vqe)
@@ -47,7 +38,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
 
     parser.add_argument("--d", type=int, default=2)
-    parser.add_argument("--Nq", type=int, default=2)
+    parser.add_argument("--Nq", type=int, default=3)
 
     args = parser.parse_args()
     main(args)

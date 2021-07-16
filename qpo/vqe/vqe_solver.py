@@ -19,12 +19,13 @@ from qiskit import BasicAer
 from qiskit.utils import QuantumInstance
 
 from qiskit_optimization import QuadraticProgram
-from qiskit_optimization.converters import LinearEqualityToPenalty
-from qiskit_optimization.algorithms import MinimumEigenOptimizer
+from qiskit_optimization.converters import QuadraticProgramToQubo
 
 from qiskit.algorithms import VQE
 from qiskit.algorithms.optimizers import SLSQP
 from qiskit.circuit.library import TwoLocal
+
+from .continuous_to_binary import ContinuousToBinary
 
 def VQESolver(Cov: object,
                 Nq: int,
@@ -46,25 +47,19 @@ def VQESolver(Cov: object,
 
         # Prepare Quadratic Program
         N = Cov.shape[0]
-        K = 2**Nq - 1
-        mod = QuadraticProgram('portfolio_optimization')
+        qp = QuadraticProgram('portfolio_optimization')
 
-        # Record variable with binary encoding
-        for i in range(N):
-                for j in range(Nq):
-                        mod.binary_var('x'+str(i)+str(j))
+        qp.continuous_var_list([str(i) for i in range(N)], lowerbound=0, upperbound=1, name="w")
+        qp.linear_constraint(linear=[1]*N, sense='EQ', rhs=1, name='total investment')
+        qp.minimize(constant=0.0, linear=None, quadratic=Cov)
 
-        # Objective function in binary encoding form
-        B = np.array([2**n for n in range(Nq**2)]).reshape((Nq,Nq))
-        Q = np.kron(Cov, B)/(K**2)
-        mod.minimize(constant=N, quadratic=Q)
+        # Convert continous variables to binary
+        con2bin = ContinuousToBinary(Nq)
+        qp_bin = con2bin.convert(qp)
 
-        # Sum asset allocation is 1 in binary encoding form
-        const = {"x"+str(i)+str(j): 2**j for i in range(N) for j in range(Nq)}
-        mod.linear_constraint(linear=const, sense='==', rhs=K**2, name='lin_eq')
-
-        lineq2penalty = LinearEqualityToPenalty()
-        qubo = lineq2penalty.convert(mod)
+        # Convert to QUBO then to Ising
+        conv = QuadraticProgramToQubo()
+        qubo = conv.convert(qp_bin)
         H, offset = qubo.to_ising()
 
         # Prepare QuantumInstance
@@ -86,4 +81,4 @@ def VQESolver(Cov: object,
 
         res = vqe.compute_minimum_eigenvalue(H)
 
-        return  res
+        return  res.optimal_value + offset

@@ -29,8 +29,8 @@ def CVXPYSolver(Cov):
     
     constraints = [sum(w) == 1]
     for wi in w:
-        constraints += [wi <= 1]
-        constraints += [0 <= wi]
+        constraints += [wi <= 1.0000001]
+        constraints += [-0.0000001 <= wi]
 
     prob = cp.Problem(cp.Minimize(cp.quad_form(w, Cov)),
                     constraints)
