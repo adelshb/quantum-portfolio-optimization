@@ -28,15 +28,19 @@ class VQESolver(object):
                 """
                 Take a Covariance matrix (from the different assets) and minimize the risk via VQE optimization.
                 """
-                N = Cov.shape[0]
+                self._Cov = Cov
+                self._N = Cov.shape[0]
 
                 self._qp = QuadraticProgram('portfolio_optimization')
-
                 self._qp.continuous_var_list([str(i) for i in range(self._N)], lowerbound=0, upperbound=1, name="w")
                 self._qp.linear_constraint(linear=[1]*self._N, sense='EQ', rhs=1, name='total investment')
                 self._qp.minimize(constant=0.0, linear=None, quadratic=self._Cov)
+                return None
 
         def to_ising(self,  Nq: int)-> None:
+                """
+                Convert a QP to a Ising.
+                """
 
                 # Convert continous variables to binary
                 con2bin = ContinuousToBinary(Nq)
@@ -46,16 +50,12 @@ class VQESolver(object):
                 conv = QuadraticProgramToQubo()
                 self._qubo = conv.convert(qp_bin)
                 H, offset = self._qubo.to_ising()
+
+                self._H = H
+                self._offset = offset
                 return H, offset
 
         def vqe_instance(self, ansatz, optimizer, quantum_instance):
-
-                # # Prepare QuantumInstance
-                # qi = QuantumInstance(BasicAer.get_backend('statevector_simulator'), seed_transpiler=self._seed, seed_simulator=self._seed)
-
-                # # Select the VQE parameters
-                # ansatz = TwoLocal(num_qubits=self._N*self._Nq, rotation_blocks='ry', entanglement_blocks='cz')
-                # slsqp = SLSQP(maxiter=100)
 
                 vqe = VQE(ansatz = ansatz, 
                         optimizer = optimizer, 
@@ -66,7 +66,40 @@ class VQESolver(object):
                         max_evals_grouped = 1, 
                         callback = None, 
                         quantum_instance = quantum_instance)
+        
+                self._vqe = vqe
 
         def solve(self)->None:
                 res = self._vqe.compute_minimum_eigenvalue(self._H)
                 return  res.optimal_value + self._offset
+
+
+        @property
+        def qubo(self) -> object:
+                """ Returns qubo instance. """
+                return self._qubo
+
+        @qubo.setter
+        def qubo(self, value: object) -> None:
+                """ Sets qubo instance. """
+                self._qubo = value
+
+        @property
+        def H(self) -> ndarray:
+                """ Returns Ising model's hamiltonian. """
+                return self._H
+
+        @H.setter
+        def H(self, value: ndarray) -> None:
+                """ Sets Ising model's hamiltonian. """
+                self._H = value
+
+        @property
+        def offset(self) -> float:
+                """ Returns offset after convertion to Ising. """
+                return self._offset
+
+        @H.setter
+        def offset(self, value: float) -> None:
+                """ Sets offset after convertion to Ising. """
+                self._offset = value
