@@ -55,7 +55,7 @@ class VQESolver(object):
                 self._offset = offset
                 return H, offset
 
-        def vqe_instance(self, ansatz, optimizer, quantum_instance):
+        def vqe_instance(self, ansatz, optimizer, quantum_instance, callback=None):
 
                 vqe = VQE(ansatz = ansatz, 
                         optimizer = optimizer, 
@@ -64,7 +64,7 @@ class VQESolver(object):
                         expectation = None, 
                         include_custom = False, 
                         max_evals_grouped = 1, 
-                        callback = None, 
+                        callback = callback, 
                         quantum_instance = quantum_instance)
         
                 self._vqe = vqe
@@ -99,7 +99,7 @@ class VQESolver(object):
                 """ Returns offset after convertion to Ising. """
                 return self._offset
 
-        @H.setter
+        @offset.setter
         def offset(self, value: float) -> None:
                 """ Sets offset after convertion to Ising. """
                 self._offset = value

@@ -25,52 +25,84 @@ from qpo.vqe.vqe_solver import VQESolver
 from qiskit import BasicAer
 from qiskit.utils import QuantumInstance
 from qiskit.circuit.library import TwoLocal
-from qiskit.algorithms.optimizers import SLSQP
+from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP
+
+import matplotlib.pyplot as plt
 
 def main(args):
 
     # Cov = randcovmat(args.d)
-    # Cov = np.array([[1,0],[0,0]])
-    Cov = np.array([[1,0,0],[0,0,0],[0,0,0]])
+    Cov = np.array([[1,0],[0,0]])
+    # Cov = np.array([[1,0,0],[0,0,0],[0,0,0]])
 
     # CVXPY
     w_cvxpy = CVXPYSolver(Cov)
-    print("CVXPY: ", w_cvxpy.T @ Cov @ w_cvxpy)
+    print("CVXPY (MOSEK): ", w_cvxpy.T @ Cov @ w_cvxpy)
 
     # VQE
+    data = {}
+    N = Cov.shape[0]
     vqe = VQESolver()
     vqe.qp(Cov = Cov)
-    vqe.to_ising(Nq = args.Nq)
 
     # Prepare QuantumInstance
     qi = QuantumInstance(BasicAer.get_backend('statevector_simulator'), seed_transpiler=args.seed, seed_simulator=args.seed)
+    
+    optimizers = [COBYLA(maxiter=args.maxiter)]
 
-    # Select the VQE parameters
-    N = Cov.shape[0]
+    for n in range(1,args.maxNq+1):
+        vqe.to_ising(Nq = n)
+        data[n] = {}
+        for opt in optimizers:
+            data[n][type(opt).__name__] = []
+            for rep in range(1,args.maxreps+1):
 
-    ansatz = TwoLocal(num_qubits=N*args.Nq, 
-                        rotation_blocks=['ry','rz'], 
-                        entanglement_blocks='cz',
-                        reps=args.reps,
-                        entanglement='full')
+                counts = []
+                values = []
+                def store_intermediate_result(eval_count, parameters, mean, std):
+                                    counts.append(eval_count)
+                                    values.append(mean)
 
-    slsqp = SLSQP(maxiter=args.maxiter)
-    vqe.vqe_instance(ansatz=ansatz, optimizer=slsqp, quantum_instance=qi)
+                ansatz = TwoLocal(num_qubits=N*n, 
+                                    rotation_blocks=['ry','rz'], 
+                                    entanglement_blocks='cz',
+                                    reps=rep,
+                                    entanglement='full')
 
-    res_vqe = vqe.solve()
-    print("VQE: ",res_vqe)
+                vqe.vqe_instance(ansatz=ansatz,
+                                optimizer=opt, 
+                                quantum_instance=qi, 
+                                callback=store_intermediate_result)
+
+                res_vqe = vqe.solve()
+                # print("VQE: ", res_vqe)
+
+                data[n][type(opt).__name__].append({"reps": rep,
+                                            "counts": np.asarray(counts),
+                                            "values": np.asarray(values) + vqe.offset })
+    for n in range(1,args.maxNq+1):
+        for opt in optimizers:
+            name = type(opt).__name__
+            for rep in range(1,args.maxreps+1):
+
+                plt.plot(data[n][name][rep-1]['counts'], data[n][name][rep-1]['values'], label=name + " reps={} Nq={}".format(rep,n))
+
+    plt.xlabel('Eval count')
+    plt.ylabel('Value')
+    plt.legend(loc='upper right')
+    plt.show()
 
 if __name__ == "__main__":
     parser = ArgumentParser()
 
     # Problem parameters
     parser.add_argument("--d", type=int, default=2)
-    parser.add_argument("--Nq", type=int, default=2)
+    parser.add_argument("--maxNq", type=int, default=3)
 
     # Quantum Solver parameters
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--maxiter", type=int, default=1000)
-    parser.add_argument("--reps", type=int, default=3)
+    parser.add_argument("--maxreps", type=int, default=2)
 
     args = parser.parse_args()
     main(args)
