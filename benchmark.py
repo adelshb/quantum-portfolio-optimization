@@ -32,8 +32,8 @@ import matplotlib.pyplot as plt
 def main(args):
 
     # Cov = randcovmat(args.d)
-    Cov = np.array([[1,0],[0,0]])
-    # Cov = np.array([[1,0,0],[0,0,0],[0,0,0]])
+    # Cov = np.array([[1,0],[0,0]])
+    Cov = np.array([[1,0,0],[0,0,0],[0,0,0]])
 
     # CVXPY
     w_cvxpy = CVXPYSolver(Cov)
@@ -97,11 +97,11 @@ if __name__ == "__main__":
 
     # Problem parameters
     parser.add_argument("--d", type=int, default=2)
-    parser.add_argument("--maxNq", type=int, default=3)
+    parser.add_argument("--maxNq", type=int, default=2)
 
     # Quantum Solver parameters
     parser.add_argument("--seed", type=int, default=None)
-    parser.add_argument("--maxiter", type=int, default=1000)
+    parser.add_argument("--maxiter", type=int, default=200)
     parser.add_argument("--maxreps", type=int, default=2)
 
     args = parser.parse_args()

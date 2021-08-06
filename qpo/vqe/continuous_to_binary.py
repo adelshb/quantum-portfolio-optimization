@@ -38,11 +38,12 @@ class ContinuousToBinary(QuadraticProgramConverter):
     def __init__(self, Nq) -> None:
         """
         Args: 
-            Nq: encoding each continous variable with Nq bits.
+            Nq: encoding each continous variable with Nq bits (binarization).
         """
 
         # Get parameters
         self._Nq = Nq
+        self._Kq = 2**Nq - 1
 
         self._src = None  # type: Optional[QuadraticProgram]
         self._dst = None  # type: Optional[QuadraticProgram]
