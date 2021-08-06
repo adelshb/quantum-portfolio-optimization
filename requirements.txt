@@ -2,3 +2,4 @@ qiskit
 qiskit-optimization
 cvxpy
 mosek
+matplotlib
