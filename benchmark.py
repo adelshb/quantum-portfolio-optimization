@@ -97,11 +97,11 @@ if __name__ == "__main__":
 
     # Problem parameters
     parser.add_argument("--d", type=int, default=2)
-    parser.add_argument("--maxNq", type=int, default=3)
+    parser.add_argument("--maxNq", type=int, default=2)
 
     # Quantum Solver parameters
     parser.add_argument("--seed", type=int, default=None)
-    parser.add_argument("--maxiter", type=int, default=1000)
+    parser.add_argument("--maxiter", type=int, default=100)
     parser.add_argument("--maxreps", type=int, default=2)
 
     args = parser.parse_args()
