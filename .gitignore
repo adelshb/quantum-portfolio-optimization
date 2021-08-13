@@ -5,3 +5,4 @@ __init__.py
 .vscode
 env/
 vqe_old/
+benchmark_ibmq.sh

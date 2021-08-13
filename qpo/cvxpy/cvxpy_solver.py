@@ -11,9 +11,11 @@
 # that they have been altered from the originals.
 """ CVXPY Optimization """
 
-import cvxpy as cp  
+from typing import Optional
+import cvxpy as cp
+from numpy import ndarray
 
-def CVXPYSolver(Cov):
+def CVXPYSolver(Cov:ndarray, verbose: Optional[bool] = False) -> float:
     """
     Take a Covariance matrix (from the different assets) and minimize the risk via Quadratic Programming.
 
@@ -35,5 +37,5 @@ def CVXPYSolver(Cov):
     prob = cp.Problem(cp.Minimize(cp.quad_form(w, Cov)),
                     constraints)
 
-    prob.solve(solver=cp.MOSEK, verbose=False)
+    prob.solve(solver=cp.MOSEK, verbose=verbose)
     return w.value
