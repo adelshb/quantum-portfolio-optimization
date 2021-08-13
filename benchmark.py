@@ -15,8 +15,11 @@ Benchmark script
 
 from argparse import ArgumentParser
 
+from qiskit.circuit import parameter
+
 from utils import randcovmat
 import numpy as np
+from sklearn.manifold import TSNE
 
 from qpo.cvxpy.cvxpy_solver import CVXPYSolver
 
@@ -27,7 +30,7 @@ from qiskit.providers.aer import AerError
 
 from qiskit.utils import QuantumInstance
 from qiskit.circuit.library import TwoLocal
-from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP
+from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP, ADAM
 
 import matplotlib.pyplot as plt
 
@@ -61,9 +64,9 @@ def main(args):
         backend = provider.get_backend(args.backend_name)
     else:
         backend = Aer.get_backend(args.backend_name)
-    qi = QuantumInstance(backend, seed_transpiler=args.seed, seed_simulator=args.seed)
+    qi = QuantumInstance(backend, seed_transpiler=args.seed, seed_simulator=args.seed, shots=10000)
     
-    optimizers = [COBYLA(maxiter=args.maxiter)]
+    optimizers = [COBYLA(maxiter=args.maxiter, tol=0.1)]
 
     vqe.to_ising()
 
@@ -76,11 +79,15 @@ def main(args):
             data[type(opt).__name__][rep] = []
             Err[type(opt).__name__][rep] = []
             for n in range(args.N):
+
+                
                 counts = []
                 values = []
+                param = []
                 def store_intermediate_result(eval_count, parameters, mean, std):
                                     counts.append(eval_count)
                                     values.append(mean)
+                                    param.append(parameters)
 
                 ansatz = TwoLocal(num_qubits=vqe.num_qubits, 
                                     rotation_blocks=['ry','rz'], 
@@ -88,18 +95,20 @@ def main(args):
                                     reps=rep,
                                     entanglement='full')
 
+                init_weights = np.random.uniform(low=0, high=np.pi, size=(ansatz.num_parameters_settable,))
                 vqe.vqe_instance(ansatz=ansatz,
                                 optimizer=opt, 
+                                init= init_weights,
                                 quantum_instance=qi, 
                                 callback=store_intermediate_result)
 
                 vqe.solve()
                 data[type(opt).__name__][rep].append({"reps": rep,
                                             "counts": np.asarray(counts),
-                                            "values": np.asarray(values) + vqe.offset })
+                                            "values": np.asarray(values) + vqe.offset,
+                                            "parameters": param})
 
                 # Error according to MOSEK result
-                name = type(opt).__name__ + "-reps-{}-{}".format(rep, n)
                 Err[type(opt).__name__][rep].append(np.abs(mosek - np.min(values + vqe.offset))/mosek)
 
     # Plot Cost function
@@ -116,7 +125,6 @@ def main(args):
     # plt.legend(loc='upper right')
     plt.show()
 
-
     # Boxplot Error
     fig_box = plt.figure()
     for opt in optimizers:
@@ -126,20 +134,34 @@ def main(args):
     plt.ylabel('Relative Error (%)')
     # plt.legend(loc='upper right')
     plt.show()
+    
+    X = np.concatenate(np.array([data[type(optimizers[0]).__name__][1][n]["parameters"] for n in range(args.N)]), dtype=object)
+    print(X.shape)
+    X_embedded = TSNE(n_components=2).fit_transform(X)
+    print(X_embedded.shape)
+    # TSNE plot
+    fig_tsne = plt.figure()
+    l = 0
+    for n in range(args.N): 
+        m = len(data[type(optimizers[0]).__name__][1][n]["parameters"])
+        plt.plot(X_embedded[l:l+m,0],X_embedded[l:l+m,1])
+        l += m
+    plt.show()
 
 if __name__ == "__main__":
     parser = ArgumentParser()
 
     # Benchmark parameters
     parser.add_argument("--d", type=int, default=2)
-    parser.add_argument("--N", type=int, default=20)
+    parser.add_argument("--N", type=int, default=10)
 
     # Quantum Solver parameters
-    parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--maxiter", type=int, default=300)
-    parser.add_argument("--maxreps", type=int, default=2)
+    parser.add_argument("--maxreps", type=int, default=1)
 
     # Quantum Instance
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--shots", type=int, default=1024)
     parser.add_argument("--backend_name", type=str, default="aer_simulator")
     parser.add_argument("--backend", type=str, default="simulator", choices=["GPU", "IBMQ", "simulator"])
     parser.add_argument("--hub", type=str, default='ibm-q')

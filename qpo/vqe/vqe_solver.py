@@ -56,11 +56,11 @@ class VQESolver(object):
                 self._num_qubits = H.num_qubits
                 return H, offset
 
-        def vqe_instance(self, ansatz, optimizer, quantum_instance, callback=None):
+        def vqe_instance(self, ansatz, optimizer, quantum_instance, init=None, callback=None):
 
                 vqe = VQE(ansatz = ansatz, 
                         optimizer = optimizer, 
-                        initial_point = None, 
+                        initial_point = init, 
                         gradient = None, 
                         expectation = None, 
                         include_custom = False, 
