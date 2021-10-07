@@ -37,13 +37,13 @@ class VQESolver(object):
                 self._qp.minimize(constant=0.0, linear=None, quadratic=self._Cov)
                 return None
 
-        def to_ising(self,  Nq: int)-> None:
+        def to_ising(self)-> None:
                 """
                 Convert a QP to a Ising.
                 """
 
                 # Convert continous variables to binary
-                con2bin = ContinuousToBinary(Nq)
+                con2bin = ContinuousToBinary()
                 qp_bin = con2bin.convert(self._qp)
 
                 # Convert to QUBO then to Ising
@@ -53,13 +53,14 @@ class VQESolver(object):
 
                 self._H = H
                 self._offset = offset
+                self._num_qubits = H.num_qubits
                 return H, offset
 
-        def vqe_instance(self, ansatz, optimizer, quantum_instance, callback=None):
+        def vqe_instance(self, ansatz, optimizer, quantum_instance, init=None, callback=None):
 
                 vqe = VQE(ansatz = ansatz, 
                         optimizer = optimizer, 
-                        initial_point = None, 
+                        initial_point = init, 
                         gradient = None, 
                         expectation = None, 
                         include_custom = False, 
@@ -103,3 +104,14 @@ class VQESolver(object):
         def offset(self, value: float) -> None:
                 """ Sets offset after convertion to Ising. """
                 self._offset = value
+
+        @property
+        def num_qubits(self) -> int:
+                """ Returns number of qubits after convertion to Ising. """
+                return self._num_qubits
+
+        @num_qubits.setter
+        def num_qubits(self, value: int) -> None:
+                """ Sets number of qubits after convertion to Ising. """
+                self._num_qubits = value
+        

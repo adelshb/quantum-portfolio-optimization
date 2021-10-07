@@ -18,7 +18,6 @@ from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
-import qiskit_optimization.algorithms  # pylint: disable=unused-import
 from qiskit_optimization.exceptions import QiskitOptimizationError
 from qiskit_optimization.problems.quadratic_objective import QuadraticObjective
 from qiskit_optimization.problems.quadratic_program import QuadraticProgram
@@ -35,15 +34,7 @@ class ContinuousToBinary(QuadraticProgramConverter):
 
     _delimiter = '@'  # users are supposed not to use this character in variable names
 
-    def __init__(self, Nq) -> None:
-        """
-        Args: 
-            Nq: encoding each continous variable with Nq bits (binarization).
-        """
-
-        # Get parameters
-        self._Nq = Nq
-        self._Kq = 2**Nq - 1
+    def __init__(self) -> None:
 
         self._src = None  # type: Optional[QuadraticProgram]
         self._dst = None  # type: Optional[QuadraticProgram]
@@ -89,7 +80,7 @@ class ContinuousToBinary(QuadraticProgramConverter):
                             "Unsupported variable type {}".format(x.vartype)
                         )
 
-            self._substitute_int_var()
+            self._substitute_cont_var()
 
         else:
             # just copy the problem if no continuous variables exist
@@ -102,11 +93,10 @@ class ContinuousToBinary(QuadraticProgramConverter):
             self, name: str, lowerbound: float, upperbound: float
     ) -> List[Tuple[str, int]]:
         var_range = upperbound - lowerbound
-        # power = int(np.log2(var_range))
-        power = self._Nq
+        power = int(np.log2(var_range))
         bounded_coef = var_range - (2 ** power - 1)
 
-        coeffs = [2 ** i for i in range(power)] + [bounded_coef]
+        coeffs = [2**i for i in range(power)] + [bounded_coef]
         return [(name + self._delimiter + str(i), coef) for i, coef in enumerate(coeffs)]
 
     def _convert_linear_coefficients_dict(
@@ -162,7 +152,7 @@ class ContinuousToBinary(QuadraticProgramConverter):
 
         return quadratic, linear, constant
 
-    def _substitute_int_var(self):
+    def _substitute_cont_var(self):
 
         # set objective
         linear, linear_constant = self._convert_linear_coefficients_dict(

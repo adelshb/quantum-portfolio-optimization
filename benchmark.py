@@ -15,94 +15,159 @@ Benchmark script
 
 from argparse import ArgumentParser
 
+from qiskit.circuit import parameter
+
 from utils import randcovmat
 import numpy as np
+from sklearn.manifold import TSNE
 
 from qpo.cvxpy.cvxpy_solver import CVXPYSolver
 
 from qpo.vqe.vqe_solver import VQESolver
 
-from qiskit import BasicAer
+from qiskit import Aer
+from qiskit.providers.aer import AerError
+
 from qiskit.utils import QuantumInstance
 from qiskit.circuit.library import TwoLocal
-from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP
+from qiskit.algorithms.optimizers import COBYLA, L_BFGS_B, SLSQP, ADAM
 
 import matplotlib.pyplot as plt
 
 def main(args):
 
-    # Cov = randcovmat(args.d)
+    Cov = randcovmat(args.d)
     # Cov = np.array([[1,0],[0,0]])
-    Cov = np.array([[1,0,0],[0,0,0],[0,0,0]])
 
     # CVXPY
-    w_cvxpy = CVXPYSolver(Cov)
-    print("CVXPY (MOSEK): ", w_cvxpy.T @ Cov @ w_cvxpy)
+    w_cvxpy = CVXPYSolver(Cov, verbose = False)
+    mosek = w_cvxpy.T @ Cov @ w_cvxpy
+    # print("CVXPY (MOSEK): ", mosek)
 
-    # VQE
+    # Initialize VQE
     data = {}
     N = Cov.shape[0]
     vqe = VQESolver()
     vqe.qp(Cov = Cov)
 
-    # Prepare QuantumInstance
-    qi = QuantumInstance(BasicAer.get_backend('statevector_simulator'), seed_transpiler=args.seed, seed_simulator=args.seed)
+    # Prepare the quantum instance
+    if args.backend == "GPU":
+        backend = Aer.get_backend(args.backend_name)
+        try:
+            backend.set_options(device='GPU')
+        except AerError as e:
+            print(e)
+    elif args.backend == "IBMQ":
+        from qiskit import IBMQ
+        IBMQ.load_account()
+        provider = IBMQ.get_provider(hub=args.hub, group=args.group, project=args.project)
+        backend = provider.get_backend(args.backend_name)
+    else:
+        backend = Aer.get_backend(args.backend_name)
+    qi = QuantumInstance(backend, seed_transpiler=args.seed, seed_simulator=args.seed, shots=10000)
     
-    optimizers = [COBYLA(maxiter=args.maxiter)]
+    optimizers = [COBYLA(maxiter=args.maxiter, tol=0.1)]
 
-    for n in range(1,args.maxNq+1):
-        vqe.to_ising(Nq = n)
-        data[n] = {}
-        for opt in optimizers:
-            data[n][type(opt).__name__] = []
-            for rep in range(1,args.maxreps+1):
+    vqe.to_ising()
 
+    data = {}
+    Err = {}
+    for opt in optimizers:
+        data[type(opt).__name__] = {}
+        Err[type(opt).__name__]  = {}
+        for rep in range(1,args.maxreps+1):
+            data[type(opt).__name__][rep] = []
+            Err[type(opt).__name__][rep] = []
+            for n in range(args.N):
+
+                
                 counts = []
                 values = []
+                param = []
                 def store_intermediate_result(eval_count, parameters, mean, std):
                                     counts.append(eval_count)
                                     values.append(mean)
+                                    param.append(parameters)
 
-                ansatz = TwoLocal(num_qubits=N*n, 
+                ansatz = TwoLocal(num_qubits=vqe.num_qubits, 
                                     rotation_blocks=['ry','rz'], 
                                     entanglement_blocks='cz',
                                     reps=rep,
                                     entanglement='full')
 
+                init_weights = np.random.uniform(low=0, high=np.pi, size=(ansatz.num_parameters_settable,))
                 vqe.vqe_instance(ansatz=ansatz,
                                 optimizer=opt, 
+                                init= init_weights,
                                 quantum_instance=qi, 
                                 callback=store_intermediate_result)
 
-                res_vqe = vqe.solve()
-                # print("VQE: ", res_vqe)
-
-                data[n][type(opt).__name__].append({"reps": rep,
+                vqe.solve()
+                data[type(opt).__name__][rep].append({"reps": rep,
                                             "counts": np.asarray(counts),
-                                            "values": np.asarray(values) + vqe.offset })
-    for n in range(1,args.maxNq+1):
-        for opt in optimizers:
-            name = type(opt).__name__
-            for rep in range(1,args.maxreps+1):
+                                            "values": np.asarray(values) + vqe.offset,
+                                            "parameters": param})
 
-                plt.plot(data[n][name][rep-1]['counts'], data[n][name][rep-1]['values'], label=name + " reps={} Nq={}".format(rep,n))
+                # Error according to MOSEK result
+                Err[type(opt).__name__][rep].append(np.abs(mosek - np.min(values + vqe.offset))/mosek)
+
+    # Plot Cost function
+    fig_cost = plt.figure(figsize=(12,7))
+    for opt in optimizers:
+        for rep in range(1,args.maxreps+1):
+            for n in range(args.N):
+                label = type(opt).__name__ + "-reps-{}-{}".format(rep, n)
+                plt.plot(data[type(opt).__name__][rep][n]['counts'], data[type(opt).__name__][rep][n]['values'], label=label)
+    plt.hlines(mosek, data[type(optimizers[0]).__name__][1][0]['counts'][0], data[type(optimizers[0]).__name__][1][0]['counts'][-1], label="MOSEK Optimum", color="black")
 
     plt.xlabel('Eval count')
     plt.ylabel('Value')
-    plt.legend(loc='upper right')
+    # plt.legend(loc='upper right')
+    plt.show()
+
+    # Boxplot Error
+    fig_box = plt.figure()
+    for opt in optimizers:
+        plt.boxplot([100*np.array(Err[type(opt).__name__][rep]) for rep in range(1,args.maxreps+1)])
+
+    plt.xlabel('Configuration')
+    plt.ylabel('Relative Error (%)')
+    # plt.legend(loc='upper right')
+    plt.show()
+    
+    X = np.concatenate(np.array([data[type(optimizers[0]).__name__][1][n]["parameters"] for n in range(args.N)]), dtype=object)
+    print(X.shape)
+    X_embedded = TSNE(n_components=2).fit_transform(X)
+    print(X_embedded.shape)
+    # TSNE plot
+    fig_tsne = plt.figure()
+    l = 0
+    for n in range(args.N): 
+        m = len(data[type(optimizers[0]).__name__][1][n]["parameters"])
+        plt.plot(X_embedded[l:l+m,0],X_embedded[l:l+m,1])
+        l += m
     plt.show()
 
 if __name__ == "__main__":
     parser = ArgumentParser()
 
-    # Problem parameters
+    # Benchmark parameters
     parser.add_argument("--d", type=int, default=2)
-    parser.add_argument("--maxNq", type=int, default=2)
+    parser.add_argument("--N", type=int, default=10)
 
     # Quantum Solver parameters
-    parser.add_argument("--seed", type=int, default=None)
-    parser.add_argument("--maxiter", type=int, default=200)
-    parser.add_argument("--maxreps", type=int, default=2)
+    parser.add_argument("--maxiter", type=int, default=300)
+    parser.add_argument("--maxreps", type=int, default=1)
+
+    # Quantum Instance
+    parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--shots", type=int, default=1024)
+    parser.add_argument("--backend_name", type=str, default="aer_simulator")
+    parser.add_argument("--backend", type=str, default="simulator", choices=["GPU", "IBMQ", "simulator"])
+    parser.add_argument("--hub", type=str, default='ibm-q')
+    parser.add_argument("--group", type=str, default='open')
+    parser.add_argument("--project", type=str, default='main')
+    parser.add_argument("--job_name", type=str, default='benchmark')
 
     args = parser.parse_args()
     main(args)
