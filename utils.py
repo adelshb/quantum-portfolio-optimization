@@ -11,6 +11,7 @@
 # that they have been altered from the originals.
 
 import numpy as np
+from numpy import ndarray
 
 def randcovmat(d):
     """
@@ -18,3 +19,10 @@ def randcovmat(d):
     """
     A = np.random.rand(d, d)
     return A @ A.T
+
+def new_inter(X: ndarray, a:float=0, b:float=1, c:float=0 , d:float=2*np.pi):
+
+    X_new = np.zeros(X.shape)
+    for i in range(X.shape[0]):
+        X_new[i] = c + (X[i]-a) * (d-c) / (b-a) 
+    return X_new

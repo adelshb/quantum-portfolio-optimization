@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Written by Adel Sohbi, https://github.com/adelshb
+# Written by Adel Sohbi, https://github.com/adelshb.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -9,7 +9,8 @@
 # Any modifications or derivative works of this code must retain this
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
-""" CVXPY Optimization """
+
+""" CVXPY Optimization Method."""
 
 from typing import Optional
 import cvxpy as cp
