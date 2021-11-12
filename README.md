@@ -6,6 +6,7 @@ Qiskit implementation of a Portfolio Optimization.
 * Qiskit
 * CVXPY
 * MOSEK
+* tqdm
 
 ```shell
 pip install -r requirements.txt

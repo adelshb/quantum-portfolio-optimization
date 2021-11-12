@@ -1,8 +1,8 @@
 python benchmark.py \
     --d 5 \
     --N 128 \
-    --maxiter 100 \
-    --maxreps 3 \
+    --maxiter 200 \
+    --rep 1 \
     --sampler "sobol" \
     --seed 42 \
     --shots 1024 \

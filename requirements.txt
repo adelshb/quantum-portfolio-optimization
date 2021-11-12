@@ -3,3 +3,4 @@ qiskit-optimization
 cvxpy
 mosek
 matplotlib
+tqdm

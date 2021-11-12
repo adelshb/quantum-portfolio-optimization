@@ -12,6 +12,7 @@
 
 """ VQE Optimization Method."""
 
+from typing import Optional
 from numpy import ndarray 
 
 from qiskit_optimization import QuadraticProgram
@@ -20,7 +21,7 @@ from qiskit.algorithms import VQE
 
 from .continuous_to_binary import ContinuousToBinary
 
-class VQESolver(object):
+class VQESolver():
         """
         Class for VQE Solver for Portfolio Optimization
         """
@@ -57,7 +58,7 @@ class VQESolver(object):
                 self._num_qubits = H.num_qubits
                 return H, offset
 
-        def vqe_instance(self, ansatz, optimizer, quantum_instance, init=None, callback=None):
+        def vqe_instance(self, ansatz, optimizer, quantum_instance, init=Optional[None], callback=None):
 
                 vqe = VQE(ansatz = ansatz, 
                         optimizer = optimizer, 
@@ -74,7 +75,6 @@ class VQESolver(object):
         def solve(self)->None:
                 res = self._vqe.compute_minimum_eigenvalue(self._H)
                 return  res.optimal_value + self._offset
-
 
         @property
         def qubo(self) -> object:

@@ -14,20 +14,17 @@
 
 from argparse import ArgumentParser
 
-from utils import new_inter, randcovmat
+from utils import randcovmat
 import numpy as np
-from scipy.stats import qmc
 
 from qpo.cvxpy.cvxpy_solver import CVXPYSolver
-
-from qpo.vqe.vqe_solver import VQESolver
+from qpo.ils.ils import ILSSolver
 
 from qiskit import Aer
 from qiskit.providers.aer import AerError
-
 from qiskit.utils import QuantumInstance
 from qiskit.circuit.library import TwoLocal
-from qiskit.algorithms.optimizers import COBYLA#, L_BFGS_B, SLSQP, ADAM
+from qiskit.algorithms.optimizers import COBYLA
 
 import matplotlib.pyplot as plt
 
@@ -40,11 +37,16 @@ def main(args):
     mosek = w_cvxpy.T @ Cov @ w_cvxpy
     # print("CVXPY (MOSEK): ", mosek)
 
-    # Initialize VQE
-    data = {}
-    N = Cov.shape[0]
-    vqe = VQESolver()
-    vqe.qp(Cov = Cov)
+    # ILS Enhanced VQE
+    ils = ILSSolver(Cov, args.sampler)
+    ansatz = TwoLocal(num_qubits=ils.vqe.num_qubits, 
+                                    rotation_blocks=['ry','rz'], 
+                                    entanglement_blocks='cz',
+                                    reps=args.rep,
+                                    entanglement='full')
+    ils.compute_seq(args.N, ansatz.num_parameters_settable)
+
+    opt = COBYLA(maxiter=args.maxiter, tol=0.1)
 
     # Prepare the quantum instance
     if args.backend == "GPU":
@@ -60,86 +62,30 @@ def main(args):
         backend = provider.get_backend(args.backend_name)
     else:
         backend = Aer.get_backend(args.backend_name)
-    qi = QuantumInstance(backend, seed_transpiler=args.seed, seed_simulator=args.seed, shots=10000)
-    
-    optimizers = [COBYLA(maxiter=args.maxiter, tol=0.1)]
+    qi = QuantumInstance(backend, seed_transpiler=args.seed, seed_simulator=args.seed, shots=args.shots)     
 
-    vqe.to_ising()
-
-    data = {}
-    Err = {}
-    for opt in optimizers:
-        data[type(opt).__name__] = {}
-        Err[type(opt).__name__]  = {}
-        for rep in range(1,args.maxreps+1):
-            data[type(opt).__name__][rep] = []
-            Err[type(opt).__name__][rep] = []
-
-            ansatz = TwoLocal(num_qubits=vqe.num_qubits, 
-                                    rotation_blocks=['ry','rz'], 
-                                    entanglement_blocks='cz',
-                                    reps=rep,
-                                    entanglement='full')
-            if args.sampler == "sobol":                        
-                samples = qmc.Sobol(d=ansatz.num_parameters_settable, scramble=False).random_base2(m=int(np.log2(args.N)))
-            else:
-                samples = np.random.uniform(low=0, high=1, size=(args.N, ansatz.num_parameters_settable))
-
-            for samp in samples:
-
-                init_weights = new_inter(samp)
-
-                counts = []
-                values = []
-                param = []
-                def store_intermediate_result(eval_count, parameters, mean, std):
-                                    counts.append(eval_count)
-                                    values.append(mean)
-                                    param.append(parameters)
-
-                vqe.vqe_instance(ansatz=ansatz,
-                                optimizer=opt, 
-                                init= init_weights,
-                                quantum_instance=qi, 
-                                callback=store_intermediate_result)
-
-                vqe.solve()
-                data[type(opt).__name__][rep].append({"reps": rep,
-                                            "counts": np.asarray(counts),
-                                            "values": np.asarray(values) + vqe.offset,
-                                            "parameters": param})
-
-                # print(np.min(values + vqe.offset))
-                # Error according to MOSEK result
-                Err[type(opt).__name__][rep].append(np.abs(mosek - np.min(values + vqe.offset))/mosek)
+    ils_data = ils.solve(ansatz= ansatz,
+                opt= opt,
+                qi= qi
+            )
+    ils_Err = [np.abs(1 - np.min(data["values"])/mosek) for data in ils_data]
 
     # Plot Cost function
     fig = plt.figure(figsize=(12,7))
     ax1 = fig.add_subplot(121)
     ax2 = fig.add_subplot(122)
-    for opt in optimizers:
-        for rep in range(1,args.maxreps+1):
-            # for n in range(args.N):
-            for n in range(samples.shape[0]):
-                label = type(opt).__name__ + "-reps-{}-{}".format(rep, n)
-                ax1.plot(data[type(opt).__name__][rep][n]['counts'], data[type(opt).__name__][rep][n]['values'], label=label)
-    ax1.hlines(mosek, data[type(optimizers[0]).__name__][1][0]['counts'][0], data[type(optimizers[0]).__name__][1][0]['counts'][-1], label="MOSEK Optimum", color="black")
-
+    for n in range(ils.samples.shape[0]):
+        ax1.plot(ils_data[n]['counts'], ils_data[n]['values'])
+    ax1.hlines(mosek, ils_data[0]['counts'][0], ils_data[0]['counts'][-1], label="MOSEK Optimum", color="black")
     ax1.set_xlabel('Eval count')
     ax1.set_ylabel('Value')
-    # plt.legend(loc='upper right')
-    # plt.show()
 
     # Boxplot Error
-    err_data = [100*np.array(Err[type(opt).__name__][rep]) for rep in range(1,args.maxreps+1)]
+    err_data = [100*np.array(err) for err in ils_Err]
     print("The minimum relative error: {}%.".format(np.min(err_data)))
-    # fig_box = plt.figure()
-    for opt in optimizers:
-        ax2.boxplot(err_data)
-
+    ax2.boxplot(err_data)
     ax2.set_xlabel('Configuration')
     ax2.set_ylabel('Relative Error (%)')
-    # plt.legend(loc='upper right')
     plt.show()
 
 if __name__ == "__main__":
@@ -151,7 +97,7 @@ if __name__ == "__main__":
 
     # Quantum Solver parameters
     parser.add_argument("--maxiter", type=int, default=200)
-    parser.add_argument("--maxreps", type=int, default=1)
+    parser.add_argument("--rep", type=int, default=1)
     parser.add_argument("--sampler", type=str, default="sobol", choices=["sobol", "random"])
 
     # Quantum Instance
