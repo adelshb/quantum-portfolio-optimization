@@ -12,6 +12,7 @@
 
 """ VQE Optimization Method."""
 
+from logging import raiseExceptions
 from typing import Optional
 from numpy import ndarray 
 
@@ -75,6 +76,12 @@ class VQESolver():
         def solve(self)->None:
                 res = self._vqe.compute_minimum_eigenvalue(self._H)
                 return  res.optimal_value + self._offset
+
+        def eval(self, params: ndarray) -> float:
+                ## 
+                # TO DO
+                ##
+                raise ValueError('Not implemented yet.')
 
         @property
         def qubo(self) -> object:

@@ -19,6 +19,7 @@ import numpy as np
 
 from qpo.cvxpy.cvxpy_solver import CVXPYSolver
 from qpo.ils.ils import ILSSolver
+from qpo.sas.sas import SASolver
 
 from qiskit import Aer
 from qiskit.providers.aer import AerError
@@ -37,18 +38,7 @@ def main(args):
     mosek = w_cvxpy.T @ Cov @ w_cvxpy
     # print("CVXPY (MOSEK): ", mosek)
 
-    # ILS Enhanced VQE
-    ils = ILSSolver(Cov, args.sampler)
-    ansatz = TwoLocal(num_qubits=ils.vqe.num_qubits, 
-                                    rotation_blocks=['ry','rz'], 
-                                    entanglement_blocks='cz',
-                                    reps=args.rep,
-                                    entanglement='full')
-    ils.compute_seq(args.N, ansatz.num_parameters_settable)
-
-    opt = COBYLA(maxiter=args.maxiter, tol=0.1)
-
-    # Prepare the quantum instance
+    # Prepare quantum instance for benchmark
     if args.backend == "GPU":
         backend = Aer.get_backend(args.backend_name)
         try:
@@ -62,7 +52,18 @@ def main(args):
         backend = provider.get_backend(args.backend_name)
     else:
         backend = Aer.get_backend(args.backend_name)
-    qi = QuantumInstance(backend, seed_transpiler=args.seed, seed_simulator=args.seed, shots=args.shots)     
+    qi = QuantumInstance(backend, seed_transpiler=args.seed, seed_simulator=args.seed, shots=args.shots)   
+
+    # ILS Enhanced VQE
+    ils = ILSSolver(Cov, args.sampler)
+    ansatz = TwoLocal(num_qubits=ils.vqe.num_qubits, 
+                                    rotation_blocks=['ry','rz'], 
+                                    entanglement_blocks='cz',
+                                    reps=args.rep,
+                                    entanglement='full')
+    ils.compute_seq(args.N, ansatz.num_parameters_settable)
+
+    opt = COBYLA(maxiter=args.maxiter, tol=0.1)  
 
     ils_data = ils.solve(ansatz= ansatz,
                 opt= opt,
@@ -87,6 +88,21 @@ def main(args):
     ax2.set_xlabel('Configuration')
     ax2.set_ylabel('Relative Error (%)')
     plt.show()
+
+    # # SA Enhanced VQE
+    # sas = SASolver(Cov)
+    # ansatz = TwoLocal(num_qubits=sas.vqe.num_qubits, 
+    #                                 rotation_blocks=['ry','rz'], 
+    #                                 entanglement_blocks='cz',
+    #                                 reps=args.rep,
+    #                                 entanglement='full')
+
+    # opt = COBYLA(maxiter=args.maxiter, tol=0.1)
+
+    # sas.build_vqe_instance(ansatz=ansatz, opt=opt, qi=qi)
+
+    # params = np.random.uniform(low=0, high=2*np.pi, size=(1, ansatz.num_parameters_settable))[0]
+
 
 if __name__ == "__main__":
     parser = ArgumentParser()

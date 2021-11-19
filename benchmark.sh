@@ -1,5 +1,5 @@
 python benchmark.py \
-    --d 5 \
+    --d 2 \
     --N 128 \
     --maxiter 200 \
     --rep 1 \
