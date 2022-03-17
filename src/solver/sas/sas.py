@@ -22,7 +22,9 @@ from qiskit.utils import QuantumInstance
 from qiskit.circuit import QuantumCircuit
 from qiskit.algorithms.optimizers import Optimizer
 
-from qpo.vqe.vqe_solver import VQESolver
+from solver.vqe.vqe_solver import VQESolver
+
+from simanneal import Annealer
 
 class SASolver():
         """
@@ -56,6 +58,23 @@ class SASolver():
                                 # init= self.params,
                                 quantum_instance=qi)
 
+        # pass extra data (the distance matrix) into the constructor
+        def __init__(self, state, distance_matrix):
+                self.distance_matrix = distance_matrix
+                super(TravellingSalesmanProblem, self).__init__(state)  # important!
+
+        def move(self):
+                """Swaps two cities in the route."""
+                # no efficiency gain, just proof of concept
+                # demonstrates returning the delta energy (optional)
+                initial_energy = self.energy()
+
+                a = random.randint(0, len(self.state) - 1)
+                b = random.randint(0, len(self.state) - 1)
+                self.state[a], self.state[b] = self.state[b], self.state[a]
+
+                return self.energy() - initial_energy
+
         def solve(self,
                 params: ndarray,
                 T0: Optional[float],
@@ -73,7 +92,7 @@ class SASolver():
                 self.sa = optimize.basinhopping(self.f, x0=params, T=T0, niter=maxiter, disp=disp)
 
 
-        def f(self, params: ndarray, return_expectation: Optional[bool]=True) -> float:
+        def energy(self, params: ndarray, return_expectation: Optional[bool]=True) -> float:
 
                 E = self.vqe.eval(params, return_expectation)
                 return E

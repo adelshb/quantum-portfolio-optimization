@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Written by Adel Sohbi, https://github.com/adelshb
+# Written by Adel Sohbi, https://github.com/adelshb. Adatped from https://qiskit.org/documentation/optimization/_modules/qiskit_optimization/converters/integer_to_binary.html#IntegerToBinary. 
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,7 +10,7 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-"""Converter to map continious variables in a quadratic program to binary variables."""
+"""Converter to map continious variables in a quadratic program to binary variables. Original code for the integer to binary case: https://qiskit.org/documentation/optimization/_modules/qiskit_optimization/converters/integer_to_binary.html#IntegerToBinary"""
 
 import copy
 import logging

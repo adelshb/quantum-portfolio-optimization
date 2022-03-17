@@ -13,13 +13,6 @@
 import numpy as np
 from numpy import ndarray
 
-def randcovmat(d):
-    """
-    Generate a random covariant matrix
-    """
-    A = np.random.rand(d, d)
-    return A @ A.T
-
 def new_inter(X: ndarray, a:float=0, b:float=1, c:float=0 , d:float=2*np.pi):
 
     X_new = np.zeros(X.shape)

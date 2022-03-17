@@ -16,7 +16,7 @@ pip install -r requirements.txt
 The VQE Solver takes a Covariance matrix and changes it to an Ising problem. The Ising model's hamiltonian is then minimized with the VQE.
 
 ```python
-from qpo.vqe.vqe_solver import VQESolver
+from src.solver.vqe.vqe_solver import VQESolver
 
 from qiskit import BasicAer
 from qiskit.utils import QuantumInstance

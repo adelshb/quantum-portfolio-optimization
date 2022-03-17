@@ -23,8 +23,8 @@ from qiskit.utils import QuantumInstance
 from qiskit.circuit import QuantumCircuit
 from qiskit.algorithms.optimizers import Optimizer
 
-from qpo.vqe.vqe_solver import VQESolver
-from utils import new_inter
+from solver.vqe.vqe_solver import VQESolver
+from solver.utils import new_inter
 
 class ILSSolver():
         """

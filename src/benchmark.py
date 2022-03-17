@@ -13,13 +13,8 @@
 """ Portfolio Optimization Methods Benchmark. """
 
 from argparse import ArgumentParser
-
-from utils import randcovmat
 import numpy as np
-
-from qpo.cvxpy.cvxpy_solver import CVXPYSolver
-from qpo.ils.ils import ILSSolver
-from qpo.sas.sas import SASolver
+import matplotlib.pyplot as plt
 
 from qiskit import Aer
 from qiskit.providers.aer import AerError
@@ -27,16 +22,29 @@ from qiskit.utils import QuantumInstance
 from qiskit.circuit.library import TwoLocal
 from qiskit.algorithms.optimizers import COBYLA
 
-import matplotlib.pyplot as plt
+from solver.cvxpy.cvxpy_solver import CVXPYSolver
+from solver.ils.ils import ILSSolver
+from solver.sas.sas import SASolver
+from data_factory.utils import rand_data, randcovmat
+from data_factory.market import Market
 
 def main(args):
 
-    Cov = randcovmat(args.d)
+    if args.data_method == "brownian_motion" or args.data_method == "random":
+        data = rand_data(args.num_assets , args.time_period , method=args.data_method)
+    elif args.data_type == "loading":
+        with open(args.path, 'rb') as f:
+            data = np.load(f)
+
+    market = Market(data)
+    Cov = market.Cov
+
+    # Cov = randcovmat(args.num_assets)
 
     # CVXPY
     w_cvxpy = CVXPYSolver(Cov, verbose = False)
     mosek = w_cvxpy.T @ Cov @ w_cvxpy
-    # print("CVXPY (MOSEK): ", mosek)
+    print("CVXPY (MOSEK): ", mosek)
 
     # Prepare quantum instance for benchmark
     if args.backend == "GPU":
@@ -69,6 +77,7 @@ def main(args):
                 opt= opt,
                 qi= qi
             )
+    print("ILS (COBYLA): ", min([np.min(data["values"]) for data in ils_data]))
     ils_Err = [np.abs(1 - np.min(data["values"])/mosek) for data in ils_data]
 
     # Plot Cost function
@@ -89,32 +98,22 @@ def main(args):
     ax2.set_ylabel('Relative Error (%)')
     plt.show()
 
-    # # SA Enhanced VQE
-    # sas = SASolver(Cov)
-    # ansatz = TwoLocal(num_qubits=sas.vqe.num_qubits, 
-    #                                 rotation_blocks=['ry','rz'], 
-    #                                 entanglement_blocks='cz',
-    #                                 reps=args.rep,
-    #                                 entanglement='full')
-
-    # opt = COBYLA(maxiter=args.maxiter, tol=0.1)
-
-    # sas.build_vqe_instance(ansatz=ansatz, opt=opt, qi=qi)
-
-    # params = np.random.uniform(low=0, high=2*np.pi, size=(1, ansatz.num_parameters_settable))[0]
-
-
 if __name__ == "__main__":
     parser = ArgumentParser()
 
+    # Dataset
+    parser.add_argument("--num_assets", type=int, default=2)
+    parser.add_argument("--time_period", type=int, default=36)
+    parser.add_argument("--data_method", type=str, default="brownian_motion", choices=["brownian_motion", "random", "load"])
+    parser.add_argument("--data_path", type=str, default="datasets/data.csv")
+
     # Benchmark parameters
-    parser.add_argument("--d", type=int, default=2)
-    parser.add_argument("--N", type=int, default=128)
+    parser.add_argument("--N", type=int, default=256)
 
     # Quantum Solver parameters
     parser.add_argument("--maxiter", type=int, default=200)
     parser.add_argument("--rep", type=int, default=1)
-    parser.add_argument("--sampler", type=str, default="sobol", choices=["sobol", "random"])
+    parser.add_argument("--sampler", type=str, default="random", choices=["sobol", "random"])
 
     # Quantum Instance
     parser.add_argument("--seed", type=int, default=42)

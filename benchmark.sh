@@ -1,14 +1,10 @@
-python benchmark.py \
+python src/benchmark.py \
     --d 2 \
-    --N 128 \
+    --N 16 \
     --maxiter 200 \
     --rep 1 \
-    --sampler "sobol" \
+    --sampler "random" \
     --seed 42 \
     --shots 1024 \
     --backend_name "aer_simulator" \
-    --backend "simulator" \
-    --hub "ibm-q" \
-    --group "open" \
-    --project "main" \
-    --job_name "benchmark"
+    --backend "simulator"
