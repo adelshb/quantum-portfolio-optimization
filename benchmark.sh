@@ -1,6 +1,6 @@
 python src/benchmark.py \
-    --d 2 \
-    --N 16 \
+    --num_assets 20 \
+    --N 8 \
     --maxiter 200 \
     --rep 1 \
     --sampler "random" \

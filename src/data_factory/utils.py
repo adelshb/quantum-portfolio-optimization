@@ -39,8 +39,8 @@ def randcovmat(N: int, seed: Optional[int]= None)-> ndarray:
 def rand_data(N: int,
     T: int,
     seed: Optional[int] = None,
-    freq: Optional[int] = "MS",
-    init_date: Optional[str] = '2019-01-01',
+    freq: Optional[int] = "D",
+    init_date: Optional[str] = '2021-01-01',
     method: str = "random",
     normalize_data: bool = True,
     ) -> DataFrame:
@@ -68,19 +68,20 @@ def rand_data(N: int,
     rng = pd.date_range(init_date, freq=freq, periods=T)
 
     if method == "random":
-        X = np.random.rand(T, N)
+        X = np.random.rand(N, T)
+
     elif method == "brownian_motion":
-        X = []
-        for __ in range(N):
-            s0 = np.random.uniform(low=50, high=400, size=(1,))
-            X.append(Brownian().stock_prices(s0=s0, n_step=T))
-        X = np.array(X).T
-    
+        br = Brownian(N)
+        X = br.generate_prices(T= 256,
+                r= 0.001,
+                dt= 1.0/T,
+                low= 50,
+                high= 400)
+
     if normalize_data == True:
         X = (X - X.min())/(X.max()-X.min())
 
-    df = pd.DataFrame(X, 
+    df = pd.DataFrame(X.T, 
                   columns=["Asset_" + str(i) for i in range(N)], 
                   index=rng)
     return df
-

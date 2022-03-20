@@ -27,9 +27,17 @@ class VQESolver():
         Class for VQE Solver for Portfolio Optimization
         """
 
-        def qp(self, Cov: ndarray)-> None:
+        def qp(self, 
+                Cov: ndarray,
+                mu: ndarray,
+                gamma: float = 0.1,
+                )-> None:
                 """
-                Take a Covariance matrix (from the different assets) and minimize the risk via VQE optimization.
+                Portfolio formulation in a qiskit QuadraticProgram.
+                Args:
+                        Cov : Covariance matrix
+                        mu : Assets' forecasts returns
+                        gamma : Risk aversion coefficient
                 """
                 self._Cov = Cov
                 self._N = Cov.shape[0]
@@ -37,7 +45,7 @@ class VQESolver():
                 self._qp = QuadraticProgram('portfolio_optimization')
                 self._qp.continuous_var_list([str(i) for i in range(self._N)], lowerbound=0, upperbound=1, name="w")
                 self._qp.linear_constraint(linear=[1]*self._N, sense='EQ', rhs=1, name='total investment')
-                self._qp.minimize(constant=0.0, linear=None, quadratic=self._Cov)
+                self._qp.minimize(constant=0.0, linear=-mu , quadratic=gamma*self._Cov/2)
                 return None
 
         def to_ising(self)-> None:

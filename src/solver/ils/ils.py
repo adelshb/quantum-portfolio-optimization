@@ -32,14 +32,25 @@ class ILSSolver():
         """
         def __init__(self,
                 Cov: ndarray,
+                mu: ndarray,
+                gamma: float = 0.1,
                 sampler_method: Optional[str] = "sobol",
                 ) -> None:
+                """
+                Args:
+                        Cov : Covariance matrix
+                        mu : Assets' forecasts returns
+                        gamma : Risk aversion coefficient
+                        sampler_method : Sampling method for initializing the ansatz at each round.
+                """
 
                 # Get parameters
                 self._Cov = Cov
+                self._mu = mu
+                self._gamma = gamma
                 self._N = Cov.shape[0]
                 self._vqe = VQESolver()
-                self._vqe.qp(Cov = self._Cov)
+                self._vqe.qp(Cov= self._Cov, mu= self._mu, gamma= self._gamma)
                 self._vqe.to_ising()
 
                 self._sampler_method = sampler_method

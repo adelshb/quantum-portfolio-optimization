@@ -13,64 +13,102 @@
 from typing import Optional
 
 import numpy as np
-from numpy import ndarray
+from numpy import float64, ndarray
+
+from scipy.stats import random_correlation
 
 class Brownian():
     """
-    A Class for Brownian motion using the Weiner process to build time series
+    A Class for Brownian motion for simulated multi-asset baskets with correlated prices
     """
-    def __init__(self) -> None:
+    def __init__(self,
+        num_assets: int = 10,
+        correlations: Optional[ndarray] = None,
+        init_prices: Optional[ndarray] = None,
+        volatilities: Optional[ndarray] = None,
+        ) -> None:
         """
         Init class
+        Args:
+            num_assets: Number of assets
+            correlations: Correlation matrix
+            init_prices: Initial prices
+            volatilities: Volatilities
         """
-        pass
+        
+        # Get parameters
+        self.num_assets = num_assets
+
+        self.Corr = correlations
+        if isinstance(self.Corr, ndarray):
+            self.R = np.linalg.cholesky(self.Corr)
+        else:
+            self.R = None
+
+        self.init_prices = init_prices
+        self.volatilies = volatilities
+
     
-    def gen_normal(self,
-        n_step: Optional[int] = 100
+    def rand_corr(self) -> None:
+        """
+        Generate a random correlation matrix and its cholesky decomposition
+        """
+
+        # Generate a random correlation matrix from random eigenvalues
+        rng = np.random.default_rng()
+        tmp_eigs = np.abs(np.random.rand(self.num_assets))
+        eigs = self.num_assets * tmp_eigs / np.sum(tmp_eigs)
+
+        self.Corr = random_correlation.rvs(eigs, random_state=rng)
+
+        # Perform Cholesky decomposition on correlation matrix
+        self.R = np.linalg.cholesky(self.Corr)
+
+    def generate_prices(self,
+        T: int = 256,
+        r: float = 0.001,
+        dt: float = 0.004,
+        low: Optional[int] = 100,
+        high: Optional[int] = 400
         ) -> ndarray:
         """
-        Generate motion by drawing from the Normal distribution
+        Generate prices for a Brownian motion
         Args:
-            n_step: Number of steps  
-        Returns:
-            A NumPy array with `n_steps` points
+            T: Number of simulated days
+            r : Risk free rate (annual)
+            dt: Time increment (annualized)
+            low: Lowest price
+            high: Highest price
         """
-        if n_step < 30:
-            print("WARNING! The number of steps is small. It may not generate a good stochastic process sequence!")
-        
-        w = np.zeros(n_step)
-        
-        for i in range(1,n_step):
-            # Sampling from the Normal distribution
-            yi = np.random.normal()
-            # Weiner process
-            w[i] = w[i-1]+(yi/np.sqrt(n_step))
-        
-        return w
 
-    def stock_prices(self,
-        s0: float = 100,
-        mu: float = 0.2,
-        sigma: float = 0.68,
-        n_step: int = 12,
-        ) -> ndarray:
-        """
-        Models a stock price S(t) using the Weiner process W(t) as
-        `S(t) = S(0).exp{(mu-(sigma^2/2).t)+sigma.W(t)}`
-        Args:
-            s0: Iniital stock price
-            mu: 'Drift' of the stock (upwards or downwards)
-            sigma: 'Volatility' of the stock
-            n_step: Number of steps   
-        Returns:
-            s: A NumPy array with the simulated stock prices over the time-period deltaT
-        """
-        time_vector = np.linspace(0,1,num=n_step)
-        # Stock variation
-        stock_var = (mu-(sigma**2/2))*time_vector
-        # Weiner process (calls the `gen_normal` method)
-        weiner_process = sigma*self.gen_normal(n_step)
-        # Add two time series, take exponent, and multiply by the initial stock price
-        s = s0*(np.exp(stock_var+weiner_process))
+        # Test if initial parameters are given. Otherwise generate random parameters
+        if isinstance(self.init_prices, ndarray):
+            stock_prices = np.array([[s]*T for s in self.init_prices])
+        else:
+            init_prices = np.random.randint(low=low, high=high, size=(self.num_assets, 1))
+            stock_prices = np.array([[s]*T for s in init_prices])
 
-        return s
+        if self.volatilies is None:
+            self.volatilies = np.abs(np.random.rand(self.num_assets))
+
+        if self.R is None:
+            self.rand_corr()
+
+        for t in range(1, T):
+            # Generate array of random standard normal draws
+            random_array = np.random.standard_normal(self.num_assets)
+            
+            # Multiply R with random_array to obtain correlated epsilons
+            epsilon_array = np.inner(random_array, self.R)
+
+            # Sample price path per stock
+            for n in range(self.num_assets):
+                dt = 1 / T 
+                S = stock_prices[n,t-1]
+                v = self.volatilies[n]
+                epsilon = epsilon_array[n]
+                
+                # Generate new stock price
+                stock_prices[n,t] = S * np.exp((r - 0.5 * v**2) * dt + v * np.sqrt(dt) * epsilon)
+
+        return stock_prices.reshape(self.num_assets, T)

@@ -16,13 +16,18 @@ from typing import Optional
 import cvxpy as cp
 from numpy import ndarray
 
-def CVXPYSolver(Cov:ndarray, verbose: Optional[bool] = False) -> float:
+def CVXPYSolver(Cov:ndarray,
+                mu:ndarray,
+                gamma:float = 0.1,
+                verbose: Optional[bool] = False
+                ) -> float:
     """
     Take a Covariance matrix (from the different assets) and minimize the risk via Quadratic Programming.
 
     Args:
         Cov : Covariance matrix
-
+        mu : Assets' forecasts returns
+        gamma : Risk aversion coefficient
     Returns:
         w : Optimum solution.
     """
@@ -32,10 +37,10 @@ def CVXPYSolver(Cov:ndarray, verbose: Optional[bool] = False) -> float:
     
     constraints = [sum(w) == 1]
     for wi in w:
-        constraints += [wi <= 1.0000001]
-        constraints += [-0.0000001 <= wi]
+        constraints += [wi <= 1]
+        constraints += [0 <= wi]
 
-    prob = cp.Problem(cp.Minimize(cp.quad_form(w, Cov)),
+    prob = cp.Problem(cp.Minimize(cp.quad_form(w, gamma*Cov/2) - mu.T @ w),
                     constraints)
 
     prob.solve(solver=cp.MOSEK, verbose=verbose)

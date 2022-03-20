@@ -44,6 +44,7 @@ class Market():
         self.Cov = self.cov() # Total covariance matrix
         self.mu = self.forcast_return() # Total forcast return
 
+
     def cov(self,
         assets: Optional[List] = None,
         Ti: Optional[Union[int,str]] = 0,
