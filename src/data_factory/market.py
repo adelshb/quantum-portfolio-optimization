@@ -10,19 +10,22 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Callable
 
 import numpy as np
 from numpy import ndarray
 
 from pandas import DataFrame
 
+from data_factory.utils import mean_forcast_return
+
 class Market():
     "Class to handle data and compute model parameters from data."
 
     def __init__(self,
         data: Union[ndarray, DataFrame],
-        normalize_data: bool = True,
+        forcast_return: Callable = mean_forcast_return,
+        normalize_data: bool = False,
         ) -> None:
 
         # Get parameters
@@ -42,8 +45,7 @@ class Market():
                 self.X = (self.X - self.X.min())/(self.X.max()-self.X.min())
 
         self.Cov = self.cov() # Total covariance matrix
-        self.mu = self.forcast_return() # Total forcast return
-
+        self.mu = self.forcast_return(forcast_return= forcast_return) # Total forcast return
 
     def cov(self,
         assets: Optional[List] = None,
@@ -79,9 +81,11 @@ class Market():
         return Cov
 
     def forcast_return(self,
+        forcast_return: Callable = mean_forcast_return,
         assets: Optional[List] = None,
         Ti: Optional[Union[int,str]] = 0,
         Tf: Optional[Union[int,str]] = -1,
+        
         ) -> ndarray:
         """Compute assets' forcast return for a specific time period and for a list of specified assets.
         Args:
@@ -107,6 +111,6 @@ class Market():
                 Tf = self.df.index.get_loc(Tf)
             except:
                 raise ValueError("Tf is not a valid date or not Dataframe with dates was provided.")
-        
-        forcast_return = np.mean(self.X, axis=1)
-        return forcast_return
+
+        fr = forcast_return(self.X[assets, Ti:Tf]) 
+        return fr

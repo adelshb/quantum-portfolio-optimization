@@ -54,10 +54,11 @@ def rand_data(N: int,
         init_date: initial date
         method: method to generate random data
     Returns:
-        X: Dataframe with random time series and dates
+        Dataframe with random time series and dates
     """
 
     __available_methods = ["random", "brownian_motion"]
+
     if method not in __available_methods:
         raise ValueError(f"method should be one of {__available_methods}")
 
@@ -72,7 +73,7 @@ def rand_data(N: int,
 
     elif method == "brownian_motion":
         br = Brownian(N)
-        X = br.generate_prices(T= 256,
+        X = br.generate_prices(T= T,
                 r= 0.001,
                 dt= 1.0/T,
                 low= 50,
@@ -85,3 +86,8 @@ def rand_data(N: int,
                   columns=["Asset_" + str(i) for i in range(N)], 
                   index=rng)
     return df
+
+def mean_forcast_return(X: ndarray) -> ndarray:
+
+    forcast_return = X[:,-1] / np.mean(X, axis=1)
+    return forcast_return

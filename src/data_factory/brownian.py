@@ -13,7 +13,7 @@
 from typing import Optional
 
 import numpy as np
-from numpy import float64, ndarray
+from numpy import ndarray
 
 from scipy.stats import random_correlation
 
@@ -46,7 +46,7 @@ class Brownian():
             self.R = None
 
         self.init_prices = init_prices
-        self.volatilies = volatilities
+        self.volatilities = volatilities
 
     
     def rand_corr(self) -> None:
@@ -88,8 +88,9 @@ class Brownian():
             init_prices = np.random.randint(low=low, high=high, size=(self.num_assets, 1))
             stock_prices = np.array([[s]*T for s in init_prices])
 
-        if self.volatilies is None:
-            self.volatilies = np.abs(np.random.rand(self.num_assets))
+        if self.volatilities is None:
+            mu, sigma = 0.5, 0.05
+            self.volatilities = np.random.normal(mu, sigma, self.num_assets)
 
         if self.R is None:
             self.rand_corr()
@@ -105,7 +106,7 @@ class Brownian():
             for n in range(self.num_assets):
                 dt = 1 / T 
                 S = stock_prices[n,t-1]
-                v = self.volatilies[n]
+                v = self.volatilities[n]
                 epsilon = epsilon_array[n]
                 
                 # Generate new stock price

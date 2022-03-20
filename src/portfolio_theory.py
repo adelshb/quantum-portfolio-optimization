@@ -37,47 +37,57 @@ def main(args):
     mu = market.mu
 
     # CVXPY
-    gammas = np.logspace(-5, 2, num=10)
+    gammas = np.logspace(-5, 1, num=20)
     risk = []
     ret = []
     wmax = []
     for gamma in gammas:
-        w_cvxpy = CVXPYSolver(Cov=Cov, mu=mu, gamma=gamma, verbose = False)
+        w_cvxpy = CVXPYSolver(Cov=Cov, mu=mu, gamma=gamma, budget=args.budget, verbose = False)
         try :
             risk.append(w_cvxpy.T @ Cov  @ w_cvxpy)
-            ret.append(mu.T @ w_cvxpy)
+            ret.append((np.ones(args.num_assets) + mu.T) @ w_cvxpy + args.budget - sum(w_cvxpy))
             wmax.append(w_cvxpy.max())
         except:
             print("CVXPY failed for {}".format(gamma))
             risk.append(np.nan)
             ret.append(np.nan)
             wmax.append(np.nan)
+    ret=np.array(ret)
+    risk=np.array(risk)
 
     # Plot simulated price paths
-    fig = plt.figure()
-    ax = fig.add_subplot(1, 1, 1)
+    fig, ax = plt.subplots(figsize=(10, 8))
     array_day_plot = [t for t in range(args.time_period)]
     for n in range(args.num_assets):
         ax.plot(array_day_plot, market.X[n], label="Asset {}".format(n))
     plt.grid()
     plt.xlabel('Day')
     plt.ylabel('Asset price')
-    plt.legend(loc='best')
     plt.show()
 
-    # Note that even in the OO-style, we use `.pyplot.figure` to create the Figure.
+    # Plot risk and return
     fig, ax = plt.subplots(figsize=(10, 8))
-    ax.plot(gammas, risk, label='Risk')  # Plot some data on the axes.
-    ax.plot(gammas, ret, label='Return')  # Plot more data on the axes...
-    ax.plot(gammas, wmax, label='Max weight')  # Plot more data on the axes...
-    ax.set_xlabel('Risk aversion (gamma)')  # Add an x-label to the axes.
-    ax.legend();  # Add a legend.
-    ax.set_title("MOSEK with num assets = {}".format(args.num_assets))
+    ax.plot(gammas, risk, label='Risk')
+    ax.plot(gammas, ret, label='Return')
+    ax.hlines(y=args.budget, xmin=gammas.min(), xmax=gammas.max() ,color='r', linestyle='-', label='Budget')
+    ax.set_xlabel('Risk aversion (gamma)')
+    ax.legend()
+    ax.set_title("MOSEK with num assets = {} and budget = {}".format(args.num_assets, args.budget))
     ax.set_yscale('log')
     plt.show()
 
+    # Plot risk/return profile
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.scatter(risk, ret, label='Return') 
+    ax.hlines(y=args.budget, xmin=risk.min(), xmax=risk.max(), color='r', linestyle='-', label='Budget')
+    ax.set_xlabel('Risk')
+    ax.set_ylabel('Return')
+    ax.set_title("Mean-Variance Efficient frtontier num assets = {} and budget = {}".format(args.num_assets, args.budget))
+    ax.set_xscale('log')
+    plt.show()
 
 if __name__ == "__main__":
+
     parser = ArgumentParser()
 
     # Dataset
@@ -88,7 +98,8 @@ if __name__ == "__main__":
     parser.add_argument("--data_path", type=str, default="datasets/data.csv")
 
     # Portfolio Optimization parameters
-    parser.add_argument("--gamma", type=float, default=0.1)
+    parser.add_argument("--budget", type=float, default=1000)
+    parser.add_argument("--gamma", type=float, default=2)
 
     args = parser.parse_args()
     main(args)

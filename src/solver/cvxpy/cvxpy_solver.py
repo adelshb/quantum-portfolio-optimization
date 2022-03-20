@@ -19,6 +19,8 @@ from numpy import ndarray
 def CVXPYSolver(Cov:ndarray,
                 mu:ndarray,
                 gamma:float = 0.1,
+                budget: float = 1000,
+                asset_limit: float = 1,
                 verbose: Optional[bool] = False
                 ) -> float:
     """
@@ -28,20 +30,22 @@ def CVXPYSolver(Cov:ndarray,
         Cov : Covariance matrix
         mu : Assets' forecasts returns
         gamma : Risk aversion coefficient
+        budget : Maximum budget
+        asset_limit : Maximum fraction of budget allocation per asset (1 = no limit)
     Returns:
-        w : Optimum solution.
+        w : Optimum solution. w[i] is the asset allocation for asset i.
     """
 
     # Define and solve the CVXPY problem.
     w = cp.Variable(Cov.shape[0])
     
-    constraints = [sum(w) == 1]
+    constraints = [sum(w) <= budget]
     for wi in w:
-        constraints += [wi <= 1]
+        constraints += [wi <= asset_limit * budget]
         constraints += [0 <= wi]
 
     prob = cp.Problem(cp.Minimize(cp.quad_form(w, gamma*Cov/2) - mu.T @ w),
                     constraints)
 
     prob.solve(solver=cp.MOSEK, verbose=verbose)
-    return w.value
+    return prob.value, w.value
