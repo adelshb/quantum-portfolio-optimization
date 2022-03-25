@@ -10,12 +10,14 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 
+from imp import init_builtin
 from typing import Optional
 
 import numpy as np
 from numpy import ndarray
 
 from scipy.stats import random_correlation
+from sympy import init_printing
 
 class Brownian():
     """
@@ -68,8 +70,10 @@ class Brownian():
         T: int = 256,
         r: float = 0.001,
         dt: float = 0.004,
-        low: Optional[int] = 100,
-        high: Optional[int] = 400
+        low: Optional[int] = 50,
+        high: Optional[int] = 400,
+        volatilities_mu: Optional[float] = 0.15,
+        volatilities_stddv: Optional[float] = 0.05
         ) -> ndarray:
         """
         Generate prices for a Brownian motion
@@ -77,20 +81,19 @@ class Brownian():
             T: Number of simulated days
             r : Risk free rate (annual)
             dt: Time increment (annualized)
-            low: Lowest price
-            high: Highest price
+            low: Lower bound initial stock prices
+            high: Upper bound initial stock prices
         """
 
         # Test if initial parameters are given. Otherwise generate random parameters
         if isinstance(self.init_prices, ndarray):
             stock_prices = np.array([[s]*T for s in self.init_prices])
         else:
-            init_prices = np.random.randint(low=low, high=high, size=(self.num_assets, 1))
+            init_prices = np.random.randint(low=low, high=high, size=(self.num_assets,))
             stock_prices = np.array([[s]*T for s in init_prices])
 
         if self.volatilities is None:
-            mu, sigma = 0.5, 0.05
-            self.volatilities = np.random.normal(mu, sigma, self.num_assets)
+            self.volatilities = np.random.normal(volatilities_mu, volatilities_stddv, self.num_assets)
 
         if self.R is None:
             self.rand_corr()

@@ -42,7 +42,8 @@ def rand_data(N: int,
     freq: Optional[int] = "D",
     init_date: Optional[str] = '2021-01-01',
     method: str = "random",
-    normalize_data: bool = True,
+    low: Optional[int] = 50,
+    high: Optional[int] = 400,
     ) -> DataFrame:
     """
     Generate random time series with dates
@@ -53,6 +54,8 @@ def rand_data(N: int,
         feq: frequency of dates
         init_date: initial date
         method: method to generate random data
+        low: lower bound initial sotck prices
+        high: upper bound initial sotck prices
     Returns:
         Dataframe with random time series and dates
     """
@@ -76,15 +79,13 @@ def rand_data(N: int,
         X = br.generate_prices(T= T,
                 r= 0.001,
                 dt= 1.0/T,
-                low= 50,
-                high= 400)
-
-    if normalize_data == True:
-        X = (X - X.min())/(X.max()-X.min())
+                low= low,
+                high= high)
 
     df = pd.DataFrame(X.T, 
                   columns=["Asset_" + str(i) for i in range(N)], 
                   index=rng)
+
     return df
 
 def mean_forcast_return(X: ndarray) -> ndarray:

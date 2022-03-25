@@ -34,6 +34,8 @@ class ILSSolver():
                 Cov: ndarray,
                 mu: ndarray,
                 gamma: float = 0.1,
+                budget: float = 1000,
+                asset_limit: float = 1.0,
                 sampler_method: Optional[str] = "sobol",
                 ) -> None:
                 """
@@ -41,6 +43,8 @@ class ILSSolver():
                         Cov : Covariance matrix
                         mu : Assets' forecasts returns
                         gamma : Risk aversion coefficient
+                        budget : Maximum budget
+                        asset_limit : Maximum fraction of budget allocation per asset (1 = no limit)
                         sampler_method : Sampling method for initializing the ansatz at each round.
                 """
 
@@ -48,9 +52,17 @@ class ILSSolver():
                 self._Cov = Cov
                 self._mu = mu
                 self._gamma = gamma
+                self._budget = budget
+                self._asset_limit = asset_limit
                 self._N = Cov.shape[0]
                 self._vqe = VQESolver()
-                self._vqe.qp(Cov= self._Cov, mu= self._mu, gamma= self._gamma)
+                self._vqe.qp(
+                        Cov= self._Cov, 
+                        mu= self._mu, 
+                        gamma= self._gamma, 
+                        budget= self._budget, 
+                        asset_limit= self._asset_limit
+                        )
                 self._vqe.to_ising()
 
                 self._sampler_method = sampler_method

@@ -25,7 +25,6 @@ class Market():
     def __init__(self,
         data: Union[ndarray, DataFrame],
         forcast_return: Callable = mean_forcast_return,
-        normalize_data: bool = False,
         ) -> None:
 
         # Get parameters
@@ -39,10 +38,6 @@ class Market():
             self.X = data.values.T
             self.N = data.shape[1]
             self.T = data.shape[0]
-
-        if normalize_data:
-            if self.X.min() != 0 and self.X.max() != 1:
-                self.X = (self.X - self.X.min())/(self.X.max()-self.X.min())
 
         self.Cov = self.cov() # Total covariance matrix
         self.mu = self.forcast_return(forcast_return= forcast_return) # Total forcast return

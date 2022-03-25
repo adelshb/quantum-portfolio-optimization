@@ -37,21 +37,22 @@ def main(args):
     mu = market.mu
 
     # CVXPY
-    gammas = np.logspace(-5, 1, num=20)
+    gammas = np.logspace(-5, 1, num=50)
     risk = []
     ret = []
     wmax = []
     for gamma in gammas:
-        w_cvxpy = CVXPYSolver(Cov=Cov, mu=mu, gamma=gamma, budget=args.budget, verbose = False)
+        __, w = CVXPYSolver(Cov=Cov, mu=mu, gamma=gamma, budget=args.budget, verbose = False)
         try :
-            risk.append(w_cvxpy.T @ Cov  @ w_cvxpy)
-            ret.append((np.ones(args.num_assets) + mu.T) @ w_cvxpy + args.budget - sum(w_cvxpy))
-            wmax.append(w_cvxpy.max())
+            risk.append(w.T @ Cov  @ w)
+            ret.append((np.ones(args.num_assets) + mu.T) @ w + args.budget - sum(w))
+            wmax.append(w.max())
         except:
             print("CVXPY failed for {}".format(gamma))
             risk.append(np.nan)
             ret.append(np.nan)
             wmax.append(np.nan)
+
     ret=np.array(ret)
     risk=np.array(risk)
 

@@ -65,7 +65,14 @@ def main(args):
     qi = QuantumInstance(backend, seed_transpiler=args.seed, seed_simulator=args.seed, shots=args.shots)   
 
     # ILS Enhanced VQE
-    ils = ILSSolver(Cov=Cov, mu=mu, gamma=2, sampler_method=args.sampler)
+    ils = ILSSolver(
+        Cov=Cov, 
+        mu=mu, 
+        gamma=2,
+        budget=args.budget,
+        asset_limit=args.asset_limit,
+        sampler_method=args.sampler
+        )
     ansatz = TwoLocal(num_qubits=ils.vqe.num_qubits, 
                                     rotation_blocks=['ry','rz'], 
                                     entanglement_blocks='cz',
@@ -112,10 +119,11 @@ if __name__ == "__main__":
 
     # Portfolio Optimization parameters
     parser.add_argument("--gamma", type=float, default=2)
-    parser.add_argument("--budget", type=float, default=1)
+    parser.add_argument("--budget", type=float, default=10)
+    parser.add_argument("--asset_limit", type=float, default=1.0)
 
     # Benchmark parameters
-    parser.add_argument("--N", type=int, default=512)
+    parser.add_argument("--N", type=int, default=8)
 
     # Quantum Solver parameters
     parser.add_argument("--maxiter", type=int, default=200)

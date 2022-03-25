@@ -14,13 +14,14 @@
 
 from typing import Optional
 import cvxpy as cp
+import numpy as np
 from numpy import ndarray
 
 def CVXPYSolver(Cov:ndarray,
                 mu:ndarray,
                 gamma:float = 0.1,
                 budget: float = 1000,
-                asset_limit: float = 1,
+                asset_limit: float = 1.0,
                 verbose: Optional[bool] = False
                 ) -> float:
     """
@@ -37,14 +38,12 @@ def CVXPYSolver(Cov:ndarray,
     """
 
     # Define and solve the CVXPY problem.
-    w = cp.Variable(Cov.shape[0])
+    w = cp.Variable(Cov.shape[0], nonneg=True)
     
-    constraints = [sum(w) <= budget]
-    for wi in w:
-        constraints += [wi <= asset_limit * budget]
-        constraints += [0 <= wi]
+    constraints = [cp.sum(w) <= budget]
+    constraints += [np.eye(Cov.shape[0]) @ w <= asset_limit * budget * np.ones(Cov.shape[0])]
 
-    prob = cp.Problem(cp.Minimize(cp.quad_form(w, gamma*Cov/2) - mu.T @ w),
+    prob = cp.Problem(cp.Minimize(gamma * 0.5 * cp.quad_form(w,Cov) - mu.T @ w),
                     constraints)
 
     prob.solve(solver=cp.MOSEK, verbose=verbose)

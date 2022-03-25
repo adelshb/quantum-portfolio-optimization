@@ -12,8 +12,9 @@
 
 """ VQE Optimization Method."""
 
-from logging import raiseExceptions
 from typing import Optional
+
+import numpy as np
 from numpy import ndarray 
 
 from qiskit_optimization import QuadraticProgram
@@ -31,6 +32,8 @@ class VQESolver():
                 Cov: ndarray,
                 mu: ndarray,
                 gamma: float = 0.1,
+                budget: float = 1000,
+                asset_limit: float = 1.0,
                 )-> None:
                 """
                 Portfolio formulation in a qiskit QuadraticProgram.
@@ -38,15 +41,46 @@ class VQESolver():
                         Cov : Covariance matrix
                         mu : Assets' forecasts returns
                         gamma : Risk aversion coefficient
+                        budget : Maximum budget
+                        asset_limit : Maximum fraction of budget allocation per asset (1 = no limit)
                 """
                 self._Cov = Cov
+                self._mu = mu
                 self._N = Cov.shape[0]
 
                 self._qp = QuadraticProgram('portfolio_optimization')
                 self._qp.continuous_var_list([str(i) for i in range(self._N)], lowerbound=0, upperbound=1, name="w")
                 self._qp.linear_constraint(linear=[1]*self._N, sense='EQ', rhs=1, name='total investment')
                 self._qp.minimize(constant=0.0, linear=-mu , quadratic=gamma*self._Cov/2)
-                return None
+
+        # def qp(self, 
+        #         Cov: ndarray,
+        #         mu: ndarray,
+        #         gamma: float = 0.1,
+        #         budget: float = 1000,
+        #         asset_limit: float = 1.0,
+        #         )-> None:
+        #         """
+        #         Portfolio formulation in a qiskit QuadraticProgram.
+        #         Args:
+        #                 Cov : Covariance matrix
+        #                 mu : Assets' forecasts returns
+        #                 gamma : Risk aversion coefficient
+        #                 budget : Maximum budget
+        #                 asset_limit : Maximum fraction of budget allocation per asset (1 = no limit)
+        #         """
+        #         self._Cov = Cov
+        #         self._mu = mu
+        #         self._N = Cov.shape[0]
+
+        #         self._qp = QuadraticProgram('portfolio_optimization')
+        #         self._qp.continuous_var_list([str(i) for i in range(self._N)], lowerbound=0, upperbound=asset_limit * budget, name="w")
+        #         self._qp.linear_constraint(linear=np.ones(self._N), sense='EQ', rhs= budget, name='total investment')
+        #         self._qp.minimize(
+        #                 constant=0.0, 
+        #                 linear=-mu, 
+        #                 quadratic=gamma * 0.5 * self._Cov
+        #                 )
 
         def to_ising(self)-> None:
                 """
@@ -60,6 +94,7 @@ class VQESolver():
                 # Convert to QUBO then to Ising
                 conv = QuadraticProgramToQubo()
                 self._qubo = conv.convert(qp_bin)
+
                 H, offset = self._qubo.to_ising()
 
                 self._H = H
