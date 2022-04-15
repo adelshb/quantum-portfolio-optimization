@@ -12,7 +12,7 @@
 
 """ VQE Optimization Method."""
 
-from typing import Optional
+from typing import Callable, Optional
 
 import numpy as np
 from numpy import ndarray 
@@ -27,31 +27,6 @@ class VQESolver():
         """
         Class for VQE Solver for Portfolio Optimization
         """
-
-        def qp(self, 
-                Cov: ndarray,
-                mu: ndarray,
-                gamma: float = 0.1,
-                budget: float = 1000,
-                asset_limit: float = 1.0,
-                )-> None:
-                """
-                Portfolio formulation in a qiskit QuadraticProgram.
-                Args:
-                        Cov : Covariance matrix
-                        mu : Assets' forecasts returns
-                        gamma : Risk aversion coefficient
-                        budget : Maximum budget
-                        asset_limit : Maximum fraction of budget allocation per asset (1 = no limit)
-                """
-                self._Cov = Cov
-                self._mu = mu
-                self._N = Cov.shape[0]
-
-                self._qp = QuadraticProgram('portfolio_optimization')
-                self._qp.continuous_var_list([str(i) for i in range(self._N)], lowerbound=0, upperbound=1, name="w")
-                self._qp.linear_constraint(linear=[1]*self._N, sense='EQ', rhs=1, name='total investment')
-                self._qp.minimize(constant=0.0, linear=-mu , quadratic=gamma*self._Cov/2)
 
         # def qp(self, 
         #         Cov: ndarray,
@@ -74,13 +49,38 @@ class VQESolver():
         #         self._N = Cov.shape[0]
 
         #         self._qp = QuadraticProgram('portfolio_optimization')
-        #         self._qp.continuous_var_list([str(i) for i in range(self._N)], lowerbound=0, upperbound=asset_limit * budget, name="w")
-        #         self._qp.linear_constraint(linear=np.ones(self._N), sense='EQ', rhs= budget, name='total investment')
-        #         self._qp.minimize(
-        #                 constant=0.0, 
-        #                 linear=-mu, 
-        #                 quadratic=gamma * 0.5 * self._Cov
-        #                 )
+        #         self._qp.continuous_var_list([str(i) for i in range(self._N)], lowerbound=0, upperbound=1, name="w")
+        #         self._qp.linear_constraint(linear=np.ones((self._N,)), sense='EQ', rhs=1, name='total investment')
+        #         self._qp.minimize(constant=0.0, linear=-mu , quadratic=gamma*self._Cov/2)
+
+        def qp(self, 
+                Cov: ndarray,
+                mu: ndarray,
+                gamma: float = 0.1,
+                budget: float = 1000,
+                asset_limit: float = 1.0,
+                )-> None:
+                """
+                Portfolio formulation in a qiskit QuadraticProgram.
+                Args:
+                        Cov : Covariance matrix
+                        mu : Assets' forecasts returns
+                        gamma : Risk aversion coefficient
+                        budget : Maximum budget
+                        asset_limit : Maximum fraction of budget allocation per asset (1 = no limit)
+                """
+                self._Cov = Cov
+                self._mu = mu
+                self._N = Cov.shape[0]
+
+                self._qp = QuadraticProgram('portfolio_optimization')
+                self._qp.continuous_var_list([str(i) for i in range(self._N)], lowerbound=0, upperbound=asset_limit * budget, name="w")
+                self._qp.linear_constraint(linear=np.ones(self._N), sense='EQ', rhs= budget, name='total investment')
+                self._qp.minimize(
+                        constant=0.0, 
+                        linear=-mu, 
+                        quadratic=gamma * 0.5 * self._Cov
+                        )
 
         def to_ising(self)-> None:
                 """
@@ -100,23 +100,25 @@ class VQESolver():
                 self._H = H
                 self._offset = offset
                 self._num_qubits = H.num_qubits
+
+                print(H)
                 return H, offset
 
-        def vqe_instance(self, ansatz, optimizer, quantum_instance, init=Optional[None], callback=None):
+        def vqe_instance(self, ansatz, optimizer, quantum_instance, init=ndarray, callback=Callable):
 
-                vqe = VQE(ansatz = ansatz, 
-                        optimizer = optimizer, 
-                        initial_point = init, 
-                        gradient = None, 
-                        expectation = None, 
-                        include_custom = False, 
-                        max_evals_grouped = 1, 
-                        callback = callback, 
+                vqe = VQE(ansatz = ansatz,
+                        optimizer = optimizer,
+                        initial_point = init,
+                        gradient = None,
+                        expectation = None,
+                        include_custom = False,
+                        max_evals_grouped = 1,
+                        callback = callback,
                         quantum_instance = quantum_instance)
         
                 self._vqe = vqe
 
-        def solve(self)->None:
+        def solve(self) -> None:
                 res = self._vqe.compute_minimum_eigenvalue(self._H)
                 return  res.optimal_value + self._offset
 

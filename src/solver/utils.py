@@ -13,7 +13,12 @@
 import numpy as np
 from numpy import ndarray
 
-def new_inter(X: ndarray, a:float=0, b:float=1, c:float=0 , d:float=2*np.pi):
+def new_inter(X: ndarray, 
+    a:float=0, 
+    b:float=1, 
+    c:float=0, 
+    d:float=2*np.pi
+    ) ->ndarray:
 
     X_new = np.zeros(X.shape)
     for i in range(X.shape[0]):

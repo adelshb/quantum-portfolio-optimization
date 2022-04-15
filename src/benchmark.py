@@ -41,11 +41,10 @@ def main(args):
 
     # Portfolio optimization parameters
     Cov = market.Cov
-    # mu = market.mu
-    mu = np.zeros((args.num_assets)) # Minimize the risk
+    mu = market.mu
+    # mu = np.zeros((args.num_assets)) # Minimize the risk
 
-    cvxpy, w_cvxpy = CVXPYSolver(Cov=Cov, mu=mu, gamma=2, verbose = False)
-    risk_cvxpy = w_cvxpy.T @ Cov  @ w_cvxpy
+    cvxpy, __ = CVXPYSolver(Cov=Cov, mu=mu, gamma=args.gamma, verbose=False)
     print("CVXPY: {}".format(cvxpy))
 
     # Prepare quantum instance for benchmark
@@ -65,27 +64,26 @@ def main(args):
     qi = QuantumInstance(backend, seed_transpiler=args.seed, seed_simulator=args.seed, shots=args.shots)   
 
     # ILS Enhanced VQE
-    ils = ILSSolver(
-        Cov=Cov, 
-        mu=mu, 
-        gamma=2,
-        budget=args.budget,
-        asset_limit=args.asset_limit,
-        sampler_method=args.sampler
-        )
+    ils = ILSSolver(Cov=Cov, 
+                mu=mu, 
+                gamma=args.gamma,
+                budget=args.budget,
+                asset_limit=args.asset_limit,
+                sampler_method=args.sampler)
+
     ansatz = TwoLocal(num_qubits=ils.vqe.num_qubits, 
                                     rotation_blocks=['ry','rz'], 
                                     entanglement_blocks='cz',
                                     reps=args.rep,
                                     entanglement='full')
+
     ils.compute_seq(args.N, ansatz.num_parameters_settable)
 
     opt = COBYLA(maxiter=args.maxiter, tol=0.1)  
 
     ils_data = ils.solve(ansatz= ansatz,
                 opt= opt,
-                qi= qi
-            )
+                qi= qi)
 
     print("ILS (COBYLA): ", min([np.min(data["values"]) for data in ils_data]))
     ils_Err = [np.abs(1 - np.min(data["values"])/cvxpy) for data in ils_data]
@@ -119,7 +117,7 @@ if __name__ == "__main__":
 
     # Portfolio Optimization parameters
     parser.add_argument("--gamma", type=float, default=2)
-    parser.add_argument("--budget", type=float, default=10)
+    parser.add_argument("--budget", type=float, default=100)
     parser.add_argument("--asset_limit", type=float, default=1.0)
 
     # Benchmark parameters

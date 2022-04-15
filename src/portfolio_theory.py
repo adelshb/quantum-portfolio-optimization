@@ -25,12 +25,12 @@ __available_methods = ["random", "brownian_motion", "loading"]
 def main(args):
 
     if args.data_method == "brownian_motion" or args.data_method == "random":
-        data = rand_data(args.num_assets , args.time_period, normalize_data=args.normalize_data, method=args.data_method)
+        data = rand_data(args.num_assets , args.time_period, method=args.data_method)
     elif args.data_type == "loading":
         with open(args.path, 'rb') as f:
             data = np.load(f)
 
-    market = Market(data, normalize_data=args.normalize_data)
+    market = Market(data)
 
     # Portfolio optimization parameters
     Cov = market.Cov
@@ -92,10 +92,9 @@ if __name__ == "__main__":
     parser = ArgumentParser()
 
     # Dataset
-    parser.add_argument("--num_assets", type=int, default=2)
+    parser.add_argument("--num_assets", type=int, default=10)
     parser.add_argument("--time_period", type=int, default=256)
     parser.add_argument("--data_method", type=str, default="brownian_motion", choices=__available_methods)
-    parser.add_argument("--normalize_data", type=bool, default=False)
     parser.add_argument("--data_path", type=str, default="datasets/data.csv")
 
     # Portfolio Optimization parameters
